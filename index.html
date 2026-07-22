@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b5ba8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>米科诺斯体素岛</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-card">
+            <div class="loading-logo"></div>
+            <div class="loading-title">米科诺斯体素岛</div>
+            <div class="loading-sub">正在准备资源包…</div>
+            <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+            <div class="loading-status" id="loading-status">正在点燃窑炉</div>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <canvas id="game-canvas"></canvas>
+
+        <header id="title-card">
+            <div class="title-logo"></div>
+            <div class="title-text">
+                <h1>米科诺斯体素岛</h1>
+                <p>打造美丽的地中海体素世界</p>
+            </div>
+        </header>
+
+        <aside id="toolbar"></aside>
+
+        <section id="palette">
+            <nav id="palette-tabs"></nav>
+            <div id="palette-grid"></div>
+        </section>
+
+        <section id="hud">
+            <div class="hud-row">
+                <div class="hud-clock">
+                    <span class="sun-icon"></span>
+                    <span id="hud-time">10:42</span>
+                </div>
+            </div>
+            <div class="hud-toggles">
+                <label class="toggle"><span>阴影</span><input type="checkbox" id="toggle-ao" checked /><span class="switch"></span></label>
+                <label class="toggle"><span>网格</span><input type="checkbox" id="toggle-grid" /><span class="switch"></span></label>
+                <label class="toggle"><span>边框</span><input type="checkbox" id="toggle-borders" checked /><span class="switch"></span></label>
+            </div>
+            <div class="hud-layers">图层</div>
+        </section>
+
+        <details id="instructions" aria-label="操作说明">
+            <summary class="ins-summary">
+                <span class="ins-badge" aria-hidden="true">?</span>
+                <span class="ins-summary-label">操作说明</span>
+                <span class="ins-summary-hint" aria-hidden="true">点击展开</span>
+            </summary>
+            <div class="ins-grid ins-grid--mouse">
+                <span class="key">单击</span><span>放置所选资源</span>
+                <span class="key">拖动</span><span>连续刷绘放置</span>
+                <span class="key">右键单击</span><span>擦除</span>
+                <span class="key">右键拖动</span><span>连续擦除</span>
+                <span class="key">Shift + 拖动</span><span>平移镜头</span>
+                <span class="key">滚轮</span><span>缩放</span>
+                <span class="key">H / V</span><span>翻转预览</span>
+                <span class="key">E</span><span>切换擦除模式</span>
+                <span class="key">G</span><span>显示/隐藏网格</span>
+                <span class="key">1-5</span><span>切换资源分类</span>
+                <span class="key">S / R</span><span>保存 / 重置</span>
+            </div>
+            <div class="ins-grid ins-grid--touch">
+                <span class="key">轻点</span><span>放置所选资源</span>
+                <span class="key">拖动</span><span>连续刷绘放置</span>
+                <span class="key">长按</span><span>擦除手指下的地格</span>
+                <span class="key">捏合</span><span>放大 / 缩小</span>
+                <span class="key">双指拖动</span><span>平移镜头</span>
+                <span class="key">分类标签</span><span>切换资源分类</span>
+            </div>
+        </details>
+
+        <div id="toast"></div>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
