@@ -82,6 +82,7 @@ export class Renderer {
         this.ctx = canvas.getContext('2d', { alpha: true });
         this.camera = camera;
         this.tileMap = tileMap;
+        this.player = null;
 
         // Visibility toggles
         this.showGrid = false;
@@ -135,6 +136,12 @@ export class Renderer {
 
     /** Mark the next frame as needing a redraw. */
     markDirty() { this._dirty = true; }
+
+    /** Attach the lightweight test character owned by Game. */
+    setPlayer(player) {
+        this.player = player;
+        this.markDirty();
+    }
 
     /**
      * Trigger a one-shot elastic placement animation for the given key.
@@ -265,7 +272,10 @@ export class Renderer {
         this._ensureChromeCache(w, h);
         this._ensurePlatformCache();
         this._ensureTerrainCache();
-        this._ensureObjectsCache();
+        // A moving character must be interleaved with building sprites by
+        // depth. A single precomposed object cache cannot do that, so use a
+        // direct (still depth-sorted) object pass while the character exists.
+        if (!this.player) this._ensureObjectsCache();
 
         // 1. Static screen-space chrome (backdrop dots + bloom + sky).
         ctx.drawImage(this._chromeCanvas.bottom, 0, 0, w, h);
@@ -284,7 +294,8 @@ export class Renderer {
         // of the same hardware-resampled draw.
         if (this._terrainCanvas)  ctx.drawImage(this._terrainCanvas,  wb.x, wb.y, wb.w, wb.h);
         if (this.showGrid)        this._drawGrid();
-        if (this._objectsCanvas)  ctx.drawImage(this._objectsCanvas,  wb.x, wb.y, wb.w, wb.h);
+        if (this.player) this._drawObjectsWithPlayer();
+        else if (this._objectsCanvas) ctx.drawImage(this._objectsCanvas, wb.x, wb.y, wb.w, wb.h);
 
         // 3. Live overlays: actively-animating objects/tiles + hover +
         //    preview ghost. Sorted together so depth is sane.
@@ -628,6 +639,93 @@ export class Renderer {
             flipH: obj.flipH,
             flipV: obj.flipV,
         });
+    }
+
+    /** Draw static buildings and the test cube in one painter-sorted pass. */
+    _drawObjectsWithPlayer() {
+        const ctx = this.ctx;
+        const drawables = [];
+
+        // Shadows sit below all sprites, matching the cached-object path.
+        ctx.save();
+        ctx.globalAlpha = SHADOW_ALPHA;
+        for (const obj of this.tileMap.objects) {
+            if (this._animObjectIds.has(obj.id)) continue;
+            const asset = getAsset(obj.assetId);
+            if (!this._castsShadow(asset)) continue;
+            this._drawShadowFor(ctx, asset, obj.gx, obj.gy, obj.footprint, {
+                flipH: obj.flipH,
+                flipV: obj.flipV,
+            });
+        }
+        this._drawPlayerShadow(ctx);
+        ctx.restore();
+
+        for (const obj of this.tileMap.objects) {
+            if (!this._animObjectIds.has(obj.id)) drawables.push({ key: obj.sortKey(), obj });
+        }
+        drawables.push({ key: this.player.x + this.player.y + 0.001, player: true });
+        drawables.sort((a, b) => a.key - b.key);
+        for (const item of drawables) {
+            if (item.player) this._drawPlayer(ctx);
+            else this._drawStaticObject(ctx, item.obj);
+        }
+    }
+
+    _drawPlayerShadow(ctx) {
+        const p = this.player;
+        if (!p) return;
+        const pos = cellToScreen(p.x, p.y);
+        ctx.save();
+        ctx.translate(pos.x, pos.y + TH / 2 + 5);
+        ctx.scale(1, 0.42);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 11, 6, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#342916';
+        ctx.fill();
+        ctx.restore();
+    }
+
+    _drawPlayer(ctx) {
+        const p = this.player;
+        if (!p) return;
+        const pos = cellToScreen(p.x, p.y);
+        const cx = pos.x;
+        const topY = pos.y + TH / 2 - 13;
+
+        // A small isometric blue cube: intentionally simple so its depth
+        // relationship with houses is immediately obvious in the demo.
+        ctx.beginPath();
+        ctx.moveTo(cx, topY);
+        ctx.lineTo(cx + 10, topY + 5);
+        ctx.lineTo(cx, topY + 10);
+        ctx.lineTo(cx - 10, topY + 5);
+        ctx.closePath();
+        ctx.fillStyle = '#72c9ee';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(20, 70, 95, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, topY + 5);
+        ctx.lineTo(cx, topY + 10);
+        ctx.lineTo(cx, topY + 25);
+        ctx.lineTo(cx - 10, topY + 20);
+        ctx.closePath();
+        ctx.fillStyle = '#2373a3';
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, topY + 10);
+        ctx.lineTo(cx + 10, topY + 5);
+        ctx.lineTo(cx + 10, topY + 20);
+        ctx.lineTo(cx, topY + 25);
+        ctx.closePath();
+        ctx.fillStyle = '#15557e';
+        ctx.fill();
+        ctx.stroke();
     }
 
     /* ── Live overlay (animations + hover + preview) ──────────── */

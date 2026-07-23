@@ -57,7 +57,8 @@ arranging things until they look right.
 | `E` | Toggle erase mode |
 | `G` | Toggle grid overlay |
 | `1`–`5` | Switch palette categories |
-| `S` / `R` | Save / reset |
+| `Shift` + `S` / `R` | Save / reset |
+| `WASD` / arrow keys | Move the blue test cube (objects block movement) |
 
 ### Touch
 

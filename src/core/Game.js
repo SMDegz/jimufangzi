@@ -26,6 +26,20 @@ export class Game {
         this.placement = new PlacementSystem(this.tileMap);
         this.input = new InputManager(canvas, this.camera, this);
 
+        // A deliberately simple controllable stand-in for a future character.
+        // `x/y` are rendered positions while `targetX/targetY` keep movement
+        // locked to grid cells.
+        this.player = {
+            x: 6,
+            y: 7,
+            targetX: 6,
+            targetY: 7,
+            moving: false,
+            speed: 5, // cells per second
+        };
+        this.renderer.setPlayer(this.player);
+        this._lastFrameTime = performance.now();
+
         // Any camera mutation (pan/zoom/recenter) needs the next frame
         // re-rendered. The renderer itself is otherwise idle.
         this.camera.onChange(() => this.renderer.markDirty());
@@ -253,6 +267,21 @@ export class Game {
         }
     }
 
+    /** Move the test character one grid cell, unless an object occupies it. */
+    movePlayer(dx, dy) {
+        const p = this.player;
+        // One command per step keeps the collision test and the visual
+        // movement easy to read while testing with held keys.
+        if (p.moving) return;
+        const gx = p.targetX + dx;
+        const gy = p.targetY + dy;
+        if (!this.tileMap.inBounds(gx, gy) || this.tileMap.objectAt(gx, gy)) return;
+        p.targetX = gx;
+        p.targetY = gy;
+        p.moving = true;
+        this.renderer.markDirty();
+    }
+
     /**
      * Place an asset and queue its elastic placement animation, optionally
      * delayed by `opts.delay` milliseconds. Used by the starter-scene
@@ -290,7 +319,23 @@ export class Game {
 
     /* ── Frame loop ───────────────────────────────────────────── */
 
-    _loop() {
+    _loop(now) {
+        const dt = Math.min(0.05, (now - this._lastFrameTime) / 1000);
+        this._lastFrameTime = now;
+        const p = this.player;
+        if (p.moving) {
+            const distance = Math.hypot(p.targetX - p.x, p.targetY - p.y);
+            const step = p.speed * dt;
+            if (distance <= step) {
+                p.x = p.targetX;
+                p.y = p.targetY;
+                p.moving = false;
+            } else {
+                p.x += (p.targetX - p.x) / distance * step;
+                p.y += (p.targetY - p.y) / distance * step;
+            }
+            this.renderer.markDirty();
+        }
         // The renderer skips its own work when nothing has changed and
         // there are no animations running, so this loop is effectively
         // free at idle. We still keep `requestAnimationFrame` ticking so

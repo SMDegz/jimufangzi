@@ -385,6 +385,17 @@ export class InputManager {
             || e.target instanceof HTMLTextAreaElement) return;
         const k = e.key.toLowerCase();
         const map = {
+            // The character follows the two axes of the isometric grid:
+            // A/D run along x, W/S run along y. Arrow keys mirror these
+            // controls so this works without remembering the layout.
+            'arrowleft':  () => this.game.movePlayer(-1, 0),
+            'a':          () => this.game.movePlayer(-1, 0),
+            'arrowright': () => this.game.movePlayer(1, 0),
+            'd':          () => this.game.movePlayer(1, 0),
+            'arrowup':    () => this.game.movePlayer(0, -1),
+            'w':          () => this.game.movePlayer(0, -1),
+            'arrowdown':  () => this.game.movePlayer(0, 1),
+            's':          () => e.shiftKey ? this.game.save() : this.game.movePlayer(0, 1),
             '1': () => this.game.setCategory('terrain'),
             '2': () => this.game.setCategory('nature'),
             '3': () => this.game.setCategory('props'),
@@ -392,7 +403,6 @@ export class InputManager {
             '5': () => this.game.setCategory('buildings'),
             'e': () => this.game.setTool(this.game.tool === 'erase' ? 'place' : 'erase'),
             'g': () => this.game.toggleGrid(),
-            's': () => this.game.save(),
             'r': () => this.game.reset(),
             'h': () => this.game.toggleFlipH(),
             'v': () => this.game.toggleFlipV(),
