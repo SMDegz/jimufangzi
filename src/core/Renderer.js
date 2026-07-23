@@ -690,11 +690,30 @@ export class Renderer {
         const p = this.player;
         if (!p) return;
         const pos = cellToScreen(p.x, p.y);
+
+        const frames = p.frames?.[p.direction];
+        if (frames?.length) {
+            const frameIndex = p.moving
+                ? Math.floor(p.animationTime * 10) % frames.length
+                : 0;
+            // Each source image includes generous transparent padding. Draw
+            // the full canvas so every directional frame keeps identical
+            // feet alignment and cannot jitter while walking.
+            const size = 56;
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(frames[frameIndex], pos.x - size / 2, pos.y - 24, size, size);
+            ctx.restore();
+            return;
+        }
+
+        // The procedural cube remains as a graceful fallback while image
+        // frames are loading or if a static host cannot serve the assets.
         const cx = pos.x;
         const topY = pos.y + TH / 2 - 13;
 
-        // A small isometric blue cube: intentionally simple so its depth
-        // relationship with houses is immediately obvious in the demo.
+        // A small isometric blue cube used only if the character art is
+        // still loading or cannot be served by the host.
         ctx.beginPath();
         ctx.moveTo(cx, topY);
         ctx.lineTo(cx + 10, topY + 5);

@@ -58,7 +58,7 @@ arranging things until they look right.
 | `G` | Toggle grid overlay |
 | `1`–`5` | Switch palette categories |
 | `Shift` + `S` / `R` | Save / reset |
-| `WASD` / arrow keys | Move the blue test cube (objects block movement) |
+| `WASD` / arrow keys | Move the animated character (objects block movement) |
 
 ### Touch
 

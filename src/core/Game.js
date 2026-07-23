@@ -16,6 +16,7 @@ import { ASSET_INDEX, ASSET_MANIFEST } from '../assets/assetManifest.js';
 import { SaveSystem } from '../storage/SaveSystem.js';
 import { cellToScreen } from '../grid/IsoGrid.js';
 import { playPlacementFor } from '../ui/Audio.js';
+import { loadPlayerSprites } from '../assets/playerSprites.js';
 
 export class Game {
     constructor(canvas, ui = null) {
@@ -36,8 +37,15 @@ export class Game {
             targetY: 7,
             moving: false,
             speed: 5, // cells per second
+            direction: 'front',
+            animationTime: 0,
+            frames: null,
         };
         this.renderer.setPlayer(this.player);
+        loadPlayerSprites().then(frames => {
+            this.player.frames = frames;
+            this.renderer.markDirty();
+        }).catch(err => console.warn('Player sprites unavailable; using cube fallback.', err));
         this._lastFrameTime = performance.now();
 
         // Any camera mutation (pan/zoom/recenter) needs the next frame
@@ -276,6 +284,10 @@ export class Game {
         const gx = p.targetX + dx;
         const gy = p.targetY + dy;
         if (!this.tileMap.inBounds(gx, gy) || this.tileMap.objectAt(gx, gy)) return;
+        if (dx < 0) p.direction = 'left';
+        if (dx > 0) p.direction = 'right';
+        if (dy < 0) p.direction = 'back';
+        if (dy > 0) p.direction = 'front';
         p.targetX = gx;
         p.targetY = gy;
         p.moving = true;
@@ -324,6 +336,7 @@ export class Game {
         this._lastFrameTime = now;
         const p = this.player;
         if (p.moving) {
+            p.animationTime += dt;
             const distance = Math.hypot(p.targetX - p.x, p.targetY - p.y);
             const step = p.speed * dt;
             if (distance <= step) {
