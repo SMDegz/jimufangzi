@@ -10,7 +10,9 @@ import { CONFIG } from '../config.js';
 import { Camera } from './Camera.js';
 import { Renderer } from './Renderer.js';
 import { InputManager } from './InputManager.js';
-import { TileMap } from '../grid/TileMap.js';
+// Versioned import prevents a browser from combining a newly deployed Game
+// module with an older cached TileMap module after a static-site deploy.
+import { TileMap } from '../grid/TileMap.js?v=expand-1';
 import { PlacementSystem } from '../building/PlacementSystem.js';
 import { ASSET_INDEX, ASSET_MANIFEST } from '../assets/assetManifest.js';
 import { SaveSystem } from '../storage/SaveSystem.js';
@@ -183,7 +185,11 @@ export class Game {
             this.ui?.showToast(`地图最大可扩展到 ${CONFIG.grid.maxSize} × ${CONFIG.grid.maxSize}`);
             return;
         }
-        const shift = this.tileMap.expand(padding);
+        // The fallback supports an already-open page that retained an older
+        // TileMap module during a deploy. Fresh loads use TileMap.expand().
+        const shift = typeof this.tileMap.expand === 'function'
+            ? this.tileMap.expand(padding)
+            : this._expandTileMapCompat(padding);
         this.player.x += shift.x;
         this.player.y += shift.y;
         this.player.targetX += shift.x;
@@ -195,6 +201,27 @@ export class Game {
         this.renderer.markDirty();
         this.save();
         this.ui?.showToast(`地图已扩展至 ${this.tileMap.width} × ${this.tileMap.height}`);
+    }
+
+    _expandTileMapCompat(padding) {
+        const map = this.tileMap;
+        const oldWidth = map.width, oldHeight = map.height;
+        const width = oldWidth + padding * 2, height = oldHeight + padding * 2;
+        const terrain = new Array(width * height).fill(null);
+        for (let y = 0; y < oldHeight; y++) {
+            for (let x = 0; x < oldWidth; x++) {
+                terrain[(y + padding) * width + x + padding] = map.terrain[y * oldWidth + x];
+            }
+        }
+        for (const obj of map.objects) { obj.gx += padding; obj.gy += padding; }
+        map.width = width;
+        map.height = height;
+        map.terrain = terrain;
+        map._occupancy = new Array(width * height).fill(null);
+        for (const obj of map.objects) map._stampOccupancy(obj, obj);
+        map.terrainVersion++;
+        map.objectsVersion++;
+        return { x: padding, y: padding };
     }
 
     /**
