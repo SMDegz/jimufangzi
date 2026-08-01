@@ -6,7 +6,8 @@
  * (setTool, selectAsset, save, reset, …) consumed by the UI.
  */
 
-import { CONFIG } from '../config.js';
+// Keep map-expansion settings in sync with this module after static deploys.
+import { CONFIG } from '../config.js?v=expand-1';
 import { Camera } from './Camera.js';
 import { Renderer } from './Renderer.js';
 import { InputManager } from './InputManager.js';
@@ -177,12 +178,15 @@ export class Game {
 
     /** Add an even border around the island without moving it on screen. */
     expandMap() {
-        const step = CONFIG.grid.expandStep;
+        // Defaults keep an already-open page safe if its config module was
+        // retained in cache from before map expansion existed.
+        const step = Number.isInteger(CONFIG.grid.expandStep) ? CONFIG.grid.expandStep : 4;
         const padding = step / 2;
         const nextWidth = this.tileMap.width + step;
         const nextHeight = this.tileMap.height + step;
-        if (nextWidth > CONFIG.grid.maxSize || nextHeight > CONFIG.grid.maxSize) {
-            this.ui?.showToast(`地图最大可扩展到 ${CONFIG.grid.maxSize} × ${CONFIG.grid.maxSize}`);
+        const maxSize = Number.isInteger(CONFIG.grid.maxSize) ? CONFIG.grid.maxSize : 64;
+        if (nextWidth > maxSize || nextHeight > maxSize) {
+            this.ui?.showToast(`地图最大可扩展到 ${maxSize} × ${maxSize}`);
             return;
         }
         // The fallback supports an already-open page that retained an older
