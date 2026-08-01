@@ -709,16 +709,45 @@ export class Renderer {
         const asset = getAsset(obj.assetId);
         if (!asset || profile.points.length < 3) return false;
         const origin = cellToScreen(obj.gx, obj.gy);
+        const dx = origin.x - asset.anchorX;
         const dy = origin.y - asset.anchorY;
-        // In an isometric projection, larger screen-world Y means closer to
-        // the viewer. The lowest point of the user-drawn foreground region
-        // is therefore its front depth edge.
-        const patchFrontY = Math.max(...profile.points.map(p =>
-            dy + (obj.flipV ? 1 - p.y : p.y) * asset.height,
-        ));
         const playerOrigin = cellToScreen(this.player.x, this.player.y);
+        const playerFootX = playerOrigin.x;
         const playerFootY = playerOrigin.y + 24;
-        return playerFootY < patchFrontY - 1;
+        const points = profile.points.map(p => ({
+            x: dx + (obj.flipH ? 1 - p.x : p.x) * asset.width,
+            y: dy + (obj.flipV ? 1 - p.y : p.y) * asset.height,
+        }));
+        const frontY = this._patchFrontYAtX(points, playerFootX);
+        // No vertical slice through the painted region means the player's
+        // feet are beside the wall rather than behind it.
+        return frontY != null && playerFootY < frontY - 1;
+    }
+
+    /**
+     * Find a polygon's foreground boundary directly under a foot point.
+     * Using the global lowest polygon pixel made a sloped building edge act
+     * like a horizontal wall: a character beside its right edge could be
+     * hidden by a much lower left/front corner. The lowest intersection of
+     * this vertical slice is the correct local isometric depth boundary.
+     */
+    _patchFrontYAtX(points, x) {
+        const hits = [];
+        const EPSILON = 0.001;
+        for (let i = 0; i < points.length; i++) {
+            const a = points[i];
+            const b = points[(i + 1) % points.length];
+            const minX = Math.min(a.x, b.x), maxX = Math.max(a.x, b.x);
+            if (x < minX - EPSILON || x > maxX + EPSILON) continue;
+            const spanX = b.x - a.x;
+            if (Math.abs(spanX) < EPSILON) {
+                if (Math.abs(x - a.x) < EPSILON) hits.push(a.y, b.y);
+                continue;
+            }
+            const t = (x - a.x) / spanX;
+            if (t >= -EPSILON && t <= 1 + EPSILON) hits.push(a.y + (b.y - a.y) * t);
+        }
+        return hits.length ? Math.max(...hits) : null;
     }
 
     worldToObjectLocal(obj, worldX, worldY) {
