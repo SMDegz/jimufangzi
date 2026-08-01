@@ -59,6 +59,7 @@ arranging things until they look right.
 | `1`–`5` | Switch palette categories |
 | `Shift` + `S` / `R` | Save / reset |
 | `WASD` / arrow keys | Move the animated character (objects block movement) |
+| `O` | Draw a reusable foreground-occlusion outline: click an object, trace the wall, then double-click / `Enter` to save (`Esc` cancels) |
 
 ### Touch
 

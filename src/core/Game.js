@@ -26,6 +26,9 @@ export class Game {
         this.renderer = new Renderer(canvas, this.camera, this.tileMap);
         this.placement = new PlacementSystem(this.tileMap);
         this.input = new InputManager(canvas, this.camera, this);
+        this.occlusionProfiles = {};
+        this.occlusionEdit = null;
+        this.renderer.setOcclusionProfiles(this.occlusionProfiles);
 
         // A deliberately simple controllable stand-in for a future character.
         // `x/y` are rendered positions while `targetX/targetY` keep movement
@@ -149,12 +152,15 @@ export class Game {
     }
 
     save() {
-        const ok = SaveSystem.save(this.tileMap, this.camera);
+        const ok = SaveSystem.save(this.tileMap, this.camera, this.occlusionProfiles);
         this.ui?.showToast(ok ? '岛屿已保存' : '保存失败');
     }
 
     load() {
-        const ok = SaveSystem.load(this.tileMap, this.camera);
+        const ok = SaveSystem.load(this.tileMap, this.camera, profiles => {
+            this.occlusionProfiles = profiles;
+            this.renderer.setOcclusionProfiles(profiles);
+        });
         if (ok) this.renderer.markDirty();
         return ok;
     }
@@ -208,7 +214,10 @@ export class Game {
         const prev = this.renderer.hoverCell;
         const sameCell = prev && prev.gx === cell.gx && prev.gy === cell.gy;
         this.renderer.hoverCell = cell;
-        if (this.tool === 'erase') {
+        if (this.isOcclusionEditing()) {
+            this.renderer.previewAssetId = null;
+            this.renderer.previewValid = true;
+        } else if (this.tool === 'erase') {
             this.renderer.previewAssetId = null;
             this.renderer.previewValid = !!this.tileMap.objectAt(cell.gx, cell.gy)
                 || !!this.tileMap.getTerrain(cell.gx, cell.gy);
@@ -226,6 +235,7 @@ export class Game {
     }
 
     onPrimaryClick(gx, gy) {
+        if (this.isOcclusionEditing()) return;
         if (!this.tileMap.inBounds(gx, gy)) return;
         if (this.tool === 'erase') {
             // Capture what's about to be removed so we can pick the right
@@ -264,6 +274,7 @@ export class Game {
     }
 
     onSecondaryClick(gx, gy) {
+        if (this.isOcclusionEditing()) return;
         // Right click always erases.
         if (!this.tileMap.inBounds(gx, gy)) return;
         const objHere = this.tileMap.objectAt(gx, gy);
@@ -292,6 +303,74 @@ export class Game {
         p.targetY = gy;
         p.moving = true;
         this.renderer.markDirty();
+    }
+
+    /* ── Foreground-occlusion profile editor ─────────────────── */
+
+    isOcclusionEditing() { return !!this.occlusionEdit; }
+
+    toggleOcclusionEditor() {
+        if (this.occlusionEdit) {
+            this.cancelOcclusionEdit();
+            return;
+        }
+        this.occlusionEdit = { selected: null, points: [] };
+        this.renderer.setOcclusionEdit(this.occlusionEdit);
+        this.canvas.style.cursor = 'crosshair';
+        this.ui?.showToast('遮挡绘制：先点击围墙，再沿前景墙面逐点勾边');
+    }
+
+    cancelOcclusionEdit() {
+        if (!this.occlusionEdit) return;
+        this.occlusionEdit = null;
+        this.renderer.setOcclusionEdit(null);
+        this.canvas.style.cursor = this.tool === 'pan' ? 'grab' : 'crosshair';
+        this.ui?.showToast('已取消遮挡绘制');
+    }
+
+    finishOcclusionEdit() {
+        const edit = this.occlusionEdit;
+        if (!edit?.selected || edit.points.length < 3) {
+            this.ui?.showToast('至少需要三个轮廓点');
+            return;
+        }
+        // Profiles belong to an asset type, so one outline fixes every
+        // placed copy of that wall or building, including future copies.
+        this.occlusionProfiles[edit.selected.assetId] = {
+            points: edit.points.map(p => ({ x: p.x, y: p.y })),
+        };
+        this.renderer.setOcclusionProfiles(this.occlusionProfiles);
+        const name = ASSET_INDEX[edit.selected.assetId]?.name ?? edit.selected.assetId;
+        this.occlusionEdit = null;
+        this.renderer.setOcclusionEdit(null);
+        this.canvas.style.cursor = this.tool === 'pan' ? 'grab' : 'crosshair';
+        this.save();
+        this.ui?.showToast(`${name} 的前景遮挡轮廓已保存`);
+    }
+
+    onOcclusionClick(gx, gy, worldX, worldY, finish = false) {
+        const edit = this.occlusionEdit;
+        if (!edit) return;
+        if (!edit.selected) {
+            const obj = this.tileMap.objectAt(gx, gy);
+            if (!obj) {
+                this.ui?.showToast('请点击一个已放置的围墙或建筑');
+                return;
+            }
+            edit.selected = obj;
+            edit.points = [];
+            this.renderer.setOcclusionEdit(edit);
+            this.ui?.showToast('沿需要盖住人物的前景墙面点击；双击或 Enter 保存');
+            return;
+        }
+        const point = this.renderer.worldToObjectLocal(edit.selected, worldX, worldY);
+        if (!point) {
+            this.ui?.showToast('请在所选物体图片范围内绘制');
+            return;
+        }
+        edit.points.push(point);
+        this.renderer.markDirty();
+        if (finish) this.finishOcclusionEdit();
     }
 
     /**

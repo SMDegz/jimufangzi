@@ -86,7 +86,7 @@ export class InputManager {
         const sy = e.clientY - rect.top;
         const world = this.camera.screenToWorld(sx, sy);
         const c = screenToCell(world.x, world.y);
-        return { gx: Math.floor(c.gx), gy: Math.floor(c.gy), sx, sy };
+        return { gx: Math.floor(c.gx), gy: Math.floor(c.gy), sx, sy, world };
     }
 
     _onMouseDown(e) {
@@ -96,6 +96,11 @@ export class InputManager {
         this._lastX = sx;
         this._lastY = sy;
         this._pressedButton = e.button;
+
+        if (this.game.isOcclusionEditing()) {
+            e.preventDefault();
+            return;
+        }
 
         const canBrush = this.game.tool !== 'pan'
             && (e.button === 0 || e.button === 2)
@@ -149,7 +154,14 @@ export class InputManager {
         }
         if (this._dragMoved) { this._pressedButton = null; return; }
 
-        const { gx, gy } = this._toCell(e);
+        const { gx, gy, world } = this._toCell(e);
+
+        if (this.game.isOcclusionEditing()) {
+            if (e.button === 0) this.game.onOcclusionClick(gx, gy, world.x, world.y, e.detail >= 2);
+            else if (e.button === 2) this.game.cancelOcclusionEdit();
+            this._pressedButton = null;
+            return;
+        }
 
         if (e.button === 0) {
             this.game.onPrimaryClick(gx, gy);
@@ -384,6 +396,13 @@ export class InputManager {
         if (e.target instanceof HTMLInputElement
             || e.target instanceof HTMLTextAreaElement) return;
         const k = e.key.toLowerCase();
+        if (this.game.isOcclusionEditing()) {
+            if (k === 'escape' || k === 'o') this.game.cancelOcclusionEdit();
+            else if (k === 'enter') this.game.finishOcclusionEdit();
+            else return;
+            e.preventDefault();
+            return;
+        }
         const map = {
             // The character follows the two axes of the isometric grid:
             // A/D run along x, W/S run along y. Arrow keys mirror these
@@ -403,6 +422,7 @@ export class InputManager {
             '5': () => this.game.setCategory('buildings'),
             'e': () => this.game.setTool(this.game.tool === 'erase' ? 'place' : 'erase'),
             'g': () => this.game.toggleGrid(),
+            'o': () => this.game.toggleOcclusionEditor(),
             'r': () => this.game.reset(),
             'h': () => this.game.toggleFlipH(),
             'v': () => this.game.toggleFlipV(),

@@ -83,6 +83,8 @@ export class Renderer {
         this.camera = camera;
         this.tileMap = tileMap;
         this.player = null;
+        this.occlusionProfiles = {};
+        this.occlusionEdit = null;
 
         // Visibility toggles
         this.showGrid = false;
@@ -140,6 +142,16 @@ export class Renderer {
     /** Attach the lightweight test character owned by Game. */
     setPlayer(player) {
         this.player = player;
+        this.markDirty();
+    }
+
+    setOcclusionProfiles(profiles) {
+        this.occlusionProfiles = profiles || {};
+        this.markDirty();
+    }
+
+    setOcclusionEdit(edit) {
+        this.occlusionEdit = edit;
         this.markDirty();
     }
 
@@ -644,7 +656,10 @@ export class Renderer {
     /** Draw static buildings and the test cube in one painter-sorted pass. */
     _drawObjectsWithPlayer() {
         const ctx = this.ctx;
-        const drawables = [];
+        const behind = [];
+        const inFront = [];
+        const occluders = [];
+        const playerKey = this.player.x + this.player.y + 0.45;
 
         // Shadows sit below all sprites, matching the cached-object path.
         ctx.save();
@@ -662,14 +677,63 @@ export class Renderer {
         ctx.restore();
 
         for (const obj of this.tileMap.objects) {
-            if (!this._animObjectIds.has(obj.id)) drawables.push({ key: obj.sortKey(), obj });
+            if (this._animObjectIds.has(obj.id)) continue;
+            const item = { key: obj.sortKey(), obj };
+            // Objects with a profile are first painted behind the character;
+            // their user-drawn foreground patch is selectively repainted
+            // afterward only when the character is on the back side.
+            if (this.occlusionProfiles[obj.assetId]?.points?.length >= 3) occluders.push(item);
+            else if (item.key <= playerKey) behind.push(item);
+            else inFront.push(item);
         }
-        drawables.push({ key: this.player.x + this.player.y + 0.001, player: true });
-        drawables.sort((a, b) => a.key - b.key);
-        for (const item of drawables) {
-            if (item.player) this._drawPlayer(ctx);
-            else this._drawStaticObject(ctx, item.obj);
+        behind.sort((a, b) => a.key - b.key);
+        occluders.sort((a, b) => a.key - b.key);
+        inFront.sort((a, b) => a.key - b.key);
+        for (const item of behind) this._drawStaticObject(ctx, item.obj);
+        for (const item of occluders) this._drawStaticObject(ctx, item.obj);
+        this._drawPlayer(ctx);
+        for (const item of inFront) this._drawStaticObject(ctx, item.obj);
+        for (const item of occluders) {
+            if (playerKey < item.key) this._drawOcclusionPatch(ctx, item.obj, this.occlusionProfiles[item.obj.assetId]);
         }
+    }
+
+    worldToObjectLocal(obj, worldX, worldY) {
+        const asset = getAsset(obj.assetId);
+        if (!asset) return null;
+        const origin = cellToScreen(obj.gx, obj.gy);
+        const dx = origin.x - asset.anchorX;
+        const dy = origin.y - asset.anchorY;
+        let x = (worldX - dx) / asset.width;
+        let y = (worldY - dy) / asset.height;
+        if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+        if (obj.flipH) x = 1 - x;
+        if (obj.flipV) y = 1 - y;
+        return { x, y };
+    }
+
+    _drawOcclusionPatch(ctx, obj, profile) {
+        const asset = getAsset(obj.assetId);
+        if (!asset || profile.points.length < 3) return;
+        const origin = cellToScreen(obj.gx, obj.gy);
+        const dx = origin.x - asset.anchorX;
+        const dy = origin.y - asset.anchorY;
+        const point = p => ({
+            x: dx + (obj.flipH ? 1 - p.x : p.x) * asset.width,
+            y: dy + (obj.flipV ? 1 - p.y : p.y) * asset.height,
+        });
+        ctx.save();
+        const first = point(profile.points[0]);
+        ctx.beginPath();
+        ctx.moveTo(first.x, first.y);
+        for (let i = 1; i < profile.points.length; i++) {
+            const p = point(profile.points[i]);
+            ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.clip();
+        this._drawStaticObject(ctx, obj);
+        ctx.restore();
     }
 
     _drawPlayerShadow(ctx) {
@@ -828,6 +892,58 @@ export class Renderer {
 
         if (items.length > 1) items.sort((a, b) => a.key - b.key);
         for (const item of items) item.draw();
+        this._drawOcclusionEditor();
+    }
+
+    /** Draw the selected asset bounds plus the user's in-progress polygon. */
+    _drawOcclusionEditor() {
+        const edit = this.occlusionEdit;
+        if (!edit?.selected) return;
+        const asset = getAsset(edit.selected.assetId);
+        if (!asset) return;
+        const origin = cellToScreen(edit.selected.gx, edit.selected.gy);
+        const dx = origin.x - asset.anchorX;
+        const dy = origin.y - asset.anchorY;
+        const localToWorld = p => ({
+            x: dx + (edit.selected.flipH ? 1 - p.x : p.x) * asset.width,
+            y: dy + (edit.selected.flipV ? 1 - p.y : p.y) * asset.height,
+        });
+        const ctx = this.ctx;
+        const unit = 1 / this.camera.zoom;
+        ctx.save();
+        ctx.lineWidth = 2 * unit;
+        ctx.setLineDash([5 * unit, 4 * unit]);
+        ctx.strokeStyle = 'rgba(255, 203, 72, 0.95)';
+        ctx.strokeRect(dx, dy, asset.width, asset.height);
+        ctx.setLineDash([]);
+        if (edit.points.length) {
+            const first = localToWorld(edit.points[0]);
+            ctx.beginPath();
+            ctx.moveTo(first.x, first.y);
+            for (let i = 1; i < edit.points.length; i++) {
+                const p = localToWorld(edit.points[i]);
+                ctx.lineTo(p.x, p.y);
+            }
+            ctx.strokeStyle = 'rgba(255, 83, 83, 1)';
+            ctx.fillStyle = 'rgba(255, 83, 83, 0.20)';
+            ctx.lineWidth = 2 * unit;
+            if (edit.points.length >= 3) {
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.stroke();
+            for (const sourcePoint of edit.points) {
+                const p = localToWorld(sourcePoint);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3.5 * unit, 0, Math.PI * 2);
+                ctx.fillStyle = '#ff5353';
+                ctx.fill();
+                ctx.strokeStyle = '#fff4d6';
+                ctx.lineWidth = unit;
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
     }
 
     _drawAnimatingObject(obj, t) {
