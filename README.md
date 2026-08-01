@@ -59,6 +59,8 @@ arranging things until they look right.
 | `1`–`5` | Switch palette categories |
 | `Shift` + `S` / `R` | Save / reset |
 | `WASD` / arrow keys | Move the animated character (objects block movement) |
+| Gate / archway | A passable entrance through a surrounding wall |
+| Stairs terrain | The character climbs two voxel steps while standing on it |
 | `O` | Draw a reusable foreground-occlusion outline: click an object, trace the wall, then double-click / `Enter` to save (`Esc` cancels) |
 | Toolbar “扩展” | Add a 2-cell border on every side of the map (up to 64 × 64) |
 

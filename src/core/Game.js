@@ -41,6 +41,8 @@ export class Game {
             y: 6,
             targetX: 6,
             targetY: 6,
+            z: 0,
+            targetZ: 0,
             moving: false,
             speed: 5, // cells per second
             direction: 'front',
@@ -356,6 +358,7 @@ export class Game {
         if (dy > 0) p.direction = 'front';
         p.targetX = gx;
         p.targetY = gy;
+        p.targetZ = this._tileHeight(gx, gy);
         p.moving = true;
         this.renderer.markDirty();
     }
@@ -366,10 +369,13 @@ export class Game {
      * right, and diagonal cells remain walkable.
      */
     _isPlayerBlocked(gx, gy) {
-        if (this.tileMap.objectAt(gx, gy)) return true;
+        const occupant = this.tileMap.objectAt(gx, gy);
+        // Gates and arches are explicit entrances: their sprite remains in
+        // the world, but the player may pass through its cell.
+        if (occupant && !['gate_fence', 'archway'].includes(occupant.assetId)) return true;
         for (const obj of this.tileMap.objects) {
             const def = ASSET_INDEX[obj.assetId];
-            const isWall = ['low_wall', 'corner_wall', 'gate_fence', 'archway', 'blue_railing']
+            const isWall = ['low_wall', 'corner_wall', 'blue_railing']
                 .includes(obj.assetId);
             if (def?.category !== 'buildings' && !isWall) continue;
             const fp = obj.footprint ?? { w: 1, d: 1 };
@@ -380,6 +386,13 @@ export class Game {
             if (inLeftBuffer || inTopBuffer) return true;
         }
         return false;
+    }
+
+    _tileHeight(gx, gy) {
+        // The existing stair terrain rises by two voxel steps. This small
+        // height layer gives the character a visible climb without changing
+        // the builder's terrain format.
+        return this.tileMap.getTerrain(gx, gy) === 'stairs' ? 2 : 0;
     }
 
     /* ── Foreground-occlusion profile editor ─────────────────── */
@@ -518,10 +531,12 @@ export class Game {
             if (distance <= step) {
                 p.x = p.targetX;
                 p.y = p.targetY;
+                p.z = p.targetZ;
                 p.moving = false;
             } else {
                 p.x += (p.targetX - p.x) / distance * step;
                 p.y += (p.targetY - p.y) / distance * step;
+                p.z += (p.targetZ - p.z) * (step / distance);
             }
             this.renderer.markDirty();
         }

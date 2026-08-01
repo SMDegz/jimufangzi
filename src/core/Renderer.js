@@ -806,6 +806,7 @@ export class Renderer {
         const p = this.player;
         if (!p) return;
         const pos = cellToScreen(p.x, p.y);
+        pos.y -= (p.z || 0) * CONFIG.voxel.height;
 
         const frames = p.frames?.[p.direction];
         if (frames?.length) {
