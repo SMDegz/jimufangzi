@@ -61,7 +61,7 @@ arranging things until they look right.
 | `WASD` / arrow keys | Move the animated character (objects block movement) |
 | Gate / archway | A passable entrance through a surrounding wall |
 | Stairs terrain | The character climbs two voxel steps while standing on it |
-| Main villa | Front entry, left staircase, and roof terrace are walkable at their respective heights |
+| Main villa | Front courtyard, left staircase, upstairs roof terrace, and lower pergola terrace are walkable at their respective heights |
 | `O` | Draw a reusable foreground-occlusion outline: click an object, trace the wall, then double-click / `Enter` to save (`Esc` cancels) |
 | Toolbar “扩展” | Add a 2-cell border on every side of the map (up to 64 × 64) |
 
