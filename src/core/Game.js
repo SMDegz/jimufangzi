@@ -28,12 +28,17 @@ const VILLA_SURFACES = Object.freeze({
     // Ground-floor terrace / front courtyard.
     '0,3': 0, '1,3': 0, '2,3': 0, '3,3': 0,
     // The exterior flight seen on the left of the villa.
-    '0,2': 3, '0,1': 5,
+    '0,2': 2, '0,1': 4,
     // Upstairs roof terrace, reached directly from the stair landing.
     '0,0': 6, '1,0': 6, '1,1': 6,
     // Lower pergola terrace, connected to the upstairs terrace at the right.
     '2,0': 6, '3,0': 6, '2,1': 6, '3,1': 6, '2,2': 6, '3,2': 6,
 });
+
+// A character can climb one short flight at a time. Besides making stairs
+// feel like stairs, this prevents entering an elevated terrace directly from
+// an adjacent ground cell that has no connecting steps.
+const MAX_PLAYER_STEP_HEIGHT = 2;
 
 export class Game {
     constructor(canvas, ui = null) {
@@ -366,13 +371,15 @@ export class Game {
         const gx = p.targetX + dx;
         const gy = p.targetY + dy;
         if (!this.tileMap.inBounds(gx, gy) || this._isPlayerBlocked(gx, gy)) return;
+        const targetZ = this._tileHeight(gx, gy);
+        if (Math.abs(targetZ - p.targetZ) > MAX_PLAYER_STEP_HEIGHT) return;
         if (dx < 0) p.direction = 'left';
         if (dx > 0) p.direction = 'right';
         if (dy < 0) p.direction = 'back';
         if (dy > 0) p.direction = 'front';
         p.targetX = gx;
         p.targetY = gy;
-        p.targetZ = this._tileHeight(gx, gy);
+        p.targetZ = targetZ;
         p.moving = true;
         this.renderer.markDirty();
     }

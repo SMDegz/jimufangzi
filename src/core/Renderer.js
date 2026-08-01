@@ -682,6 +682,14 @@ export class Renderer {
         for (const obj of this.tileMap.objects) {
             if (this._animObjectIds.has(obj.id)) continue;
             const item = { key: obj.sortKey(), obj };
+            // The main villa is a single baked sprite. Once the player is
+            // standing on one of its configured walk surfaces (including the
+            // zero-height ground terrace), draw the entire sprite first so
+            // no opaque façade piece can swallow the character.
+            if (this._isPlayerInsideVilla(obj)) {
+                behind.push(item);
+                continue;
+            }
             // Objects with a profile are first painted behind the character;
             // their user-drawn foreground patch is selectively repainted
             // afterward only when the character is on the back side.
@@ -711,11 +719,7 @@ export class Renderer {
     _isPlayerBehindOcclusionPatch(obj, profile) {
         const asset = getAsset(obj.assetId);
         if (!asset || profile.points.length < 3) return false;
-        const withinObject = this.player.x >= obj.gx
-            && this.player.x < obj.gx + obj.footprint.w
-            && this.player.y >= obj.gy
-            && this.player.y < obj.gy + obj.footprint.d;
-        if (withinObject && (this.player.z || 0) > 0) return false;
+        if (this._isPlayerInsideVilla(obj)) return false;
         const origin = cellToScreen(obj.gx, obj.gy);
         const dx = origin.x - asset.anchorX;
         const dy = origin.y - asset.anchorY;
@@ -730,6 +734,15 @@ export class Renderer {
         // No vertical slice through the painted region means the player's
         // feet are beside the wall rather than behind it.
         return frontY != null && playerFootY < frontY - 1;
+    }
+
+    _isPlayerInsideVilla(obj) {
+        if (obj.assetId !== 'villa') return false;
+        const footprint = obj.footprint ?? { w: 1, d: 1 };
+        return this.player.x >= obj.gx
+            && this.player.x < obj.gx + footprint.w
+            && this.player.y >= obj.gy
+            && this.player.y < obj.gy + footprint.d;
     }
 
     /**
