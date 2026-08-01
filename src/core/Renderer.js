@@ -693,16 +693,32 @@ export class Renderer {
         for (const item of occluders) this._drawStaticObject(ctx, item.obj);
         this._drawPlayer(ctx);
         for (const item of inFront) this._drawStaticObject(ctx, item.obj);
-        // A user-drawn patch explicitly denotes pixels that belong to the
-        // foreground. It must be redrawn above the character regardless of
-        // the coarse grid sort key: at a building's side edge the sprites
-        // can overlap on screen even when their gx + gy ordering says the
-        // player is "in front". With clipping, this only affects pixels in
-        // the painted wall region and leaves the player's head visible when
-        // the outline excludes it.
+        // Use the actual screen-world depth of the character's feet against
+        // the drawn region's closest edge. A whole-object gx + gy key is too
+        // coarse at side walls, while drawing unconditionally would also
+        // hide a character who has already walked in front of the building.
         for (const item of occluders) {
-            this._drawOcclusionPatch(ctx, item.obj, this.occlusionProfiles[item.obj.assetId]);
+            const profile = this.occlusionProfiles[item.obj.assetId];
+            if (this._isPlayerBehindOcclusionPatch(item.obj, profile)) {
+                this._drawOcclusionPatch(ctx, item.obj, profile);
+            }
         }
+    }
+
+    _isPlayerBehindOcclusionPatch(obj, profile) {
+        const asset = getAsset(obj.assetId);
+        if (!asset || profile.points.length < 3) return false;
+        const origin = cellToScreen(obj.gx, obj.gy);
+        const dy = origin.y - asset.anchorY;
+        // In an isometric projection, larger screen-world Y means closer to
+        // the viewer. The lowest point of the user-drawn foreground region
+        // is therefore its front depth edge.
+        const patchFrontY = Math.max(...profile.points.map(p =>
+            dy + (obj.flipV ? 1 - p.y : p.y) * asset.height,
+        ));
+        const playerOrigin = cellToScreen(this.player.x, this.player.y);
+        const playerFootY = playerOrigin.y + 24;
+        return playerFootY < patchFrontY - 1;
     }
 
     worldToObjectLocal(obj, worldX, worldY) {
