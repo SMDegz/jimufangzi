@@ -739,10 +739,16 @@ export class Renderer {
     _isPlayerInsideVilla(obj) {
         if (obj.assetId !== 'villa') return false;
         const footprint = obj.footprint ?? { w: 1, d: 1 };
-        return this.player.x >= obj.gx
-            && this.player.x < obj.gx + footprint.w
-            && this.player.y >= obj.gy
-            && this.player.y < obj.gy + footprint.d;
+        const isWithin = (x, y) => x >= obj.gx
+            && x < obj.gx + footprint.w
+            && y >= obj.gy
+            && y < obj.gy + footprint.d;
+        // Movement interpolates x/y, while collision immediately reserves
+        // targetX/targetY. Include the target cell so the sprite layering
+        // switches on the first frame of entering a doorway or stair rather
+        // than after the character has already moved under the façade.
+        return isWithin(this.player.x, this.player.y)
+            || isWithin(this.player.targetX, this.player.targetY);
     }
 
     /**
