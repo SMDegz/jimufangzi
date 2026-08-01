@@ -38,9 +38,9 @@ export class Game {
         // locked to grid cells.
         this.player = {
             x: 6,
-            y: 7,
+            y: 6,
             targetX: 6,
-            targetY: 7,
+            targetY: 6,
             moving: false,
             speed: 5, // cells per second
             direction: 'front',
@@ -349,7 +349,7 @@ export class Game {
         if (p.moving) return;
         const gx = p.targetX + dx;
         const gy = p.targetY + dy;
-        if (!this.tileMap.inBounds(gx, gy) || this.tileMap.objectAt(gx, gy)) return;
+        if (!this.tileMap.inBounds(gx, gy) || this._isPlayerBlocked(gx, gy)) return;
         if (dx < 0) p.direction = 'left';
         if (dx > 0) p.direction = 'right';
         if (dy < 0) p.direction = 'back';
@@ -358,6 +358,25 @@ export class Game {
         p.targetY = gy;
         p.moving = true;
         this.renderer.markDirty();
+    }
+
+    /**
+     * Buildings visually overhang their back/left grid edges. Reserve one
+     * cell along those sides for the player so they cannot walk underneath
+     * painted walls that a footprint-only collision test does not cover.
+     */
+    _isPlayerBlocked(gx, gy) {
+        if (this.tileMap.objectAt(gx, gy)) return true;
+        for (const obj of this.tileMap.objects) {
+            if (ASSET_INDEX[obj.assetId]?.category !== 'buildings') continue;
+            const fp = obj.footprint ?? { w: 1, d: 1 };
+            const inLeftBuffer = gx === obj.gx - 1
+                && gy >= obj.gy && gy < obj.gy + fp.d;
+            const inTopBuffer = gy === obj.gy - 1
+                && gx >= obj.gx && gx < obj.gx + fp.w;
+            if (inLeftBuffer || inTopBuffer) return true;
+        }
+        return false;
     }
 
     /* ── Foreground-occlusion profile editor ─────────────────── */
