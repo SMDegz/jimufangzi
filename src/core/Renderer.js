@@ -693,8 +693,15 @@ export class Renderer {
         for (const item of occluders) this._drawStaticObject(ctx, item.obj);
         this._drawPlayer(ctx);
         for (const item of inFront) this._drawStaticObject(ctx, item.obj);
+        // A user-drawn patch explicitly denotes pixels that belong to the
+        // foreground. It must be redrawn above the character regardless of
+        // the coarse grid sort key: at a building's side edge the sprites
+        // can overlap on screen even when their gx + gy ordering says the
+        // player is "in front". With clipping, this only affects pixels in
+        // the painted wall region and leaves the player's head visible when
+        // the outline excludes it.
         for (const item of occluders) {
-            if (playerKey < item.key) this._drawOcclusionPatch(ctx, item.obj, this.occlusionProfiles[item.obj.assetId]);
+            this._drawOcclusionPatch(ctx, item.obj, this.occlusionProfiles[item.obj.assetId]);
         }
     }
 
