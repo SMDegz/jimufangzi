@@ -21,6 +21,15 @@ import { cellToScreen } from '../grid/IsoGrid.js';
 import { playPlacementFor } from '../ui/Audio.js';
 import { loadPlayerSprites } from '../assets/playerSprites.js';
 
+// Local walk surfaces for the main-villa artwork. Coordinates are relative
+// to its 4×4 footprint: the front entry leads to the left exterior stair,
+// which climbs onto the upper roof terrace visible in the villa sprite.
+const VILLA_SURFACES = Object.freeze({
+    '1,3': 0, '2,3': 0, '3,3': 0, // front entry / ground courtyard
+    '0,3': 1, '0,2': 3, '0,1': 5, // exterior stair flight
+    '0,0': 6, '1,0': 6, '1,1': 6, // roof terrace
+});
+
 export class Game {
     constructor(canvas, ui = null) {
         this.canvas = canvas;
@@ -372,7 +381,9 @@ export class Game {
         const occupant = this.tileMap.objectAt(gx, gy);
         // Gates and arches are explicit entrances: their sprite remains in
         // the world, but the player may pass through its cell.
-        if (occupant && !['gate_fence', 'archway'].includes(occupant.assetId)) return true;
+        if (occupant
+            && !['gate_fence', 'archway'].includes(occupant.assetId)
+            && this._structureHeightAt(gx, gy) == null) return true;
         for (const obj of this.tileMap.objects) {
             const def = ASSET_INDEX[obj.assetId];
             const isWall = ['low_wall', 'corner_wall', 'blue_railing']
@@ -389,10 +400,21 @@ export class Game {
     }
 
     _tileHeight(gx, gy) {
+        const structureHeight = this._structureHeightAt(gx, gy);
+        if (structureHeight != null) return structureHeight;
         // The existing stair terrain rises by two voxel steps. This small
         // height layer gives the character a visible climb without changing
         // the builder's terrain format.
         return this.tileMap.getTerrain(gx, gy) === 'stairs' ? 2 : 0;
+    }
+
+    _structureHeightAt(gx, gy) {
+        const obj = this.tileMap.objectAt(gx, gy);
+        if (!obj || obj.assetId !== 'villa') return null;
+        const localX = gx - obj.gx;
+        const localY = gy - obj.gy;
+        const key = `${localX},${localY}`;
+        return Object.hasOwn(VILLA_SURFACES, key) ? VILLA_SURFACES[key] : null;
     }
 
     /* ── Foreground-occlusion profile editor ─────────────────── */

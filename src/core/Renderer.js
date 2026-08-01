@@ -659,7 +659,10 @@ export class Renderer {
         const behind = [];
         const inFront = [];
         const occluders = [];
-        const playerKey = this.player.x + this.player.y + 0.45;
+        // Elevation lifts a player above a building's ordinary ground-depth
+        // band so a character on the villa's roof terrace is not painted
+        // behind its own façade.
+        const playerKey = this.player.x + this.player.y + 0.45 + (this.player.z || 0) * 1.25;
 
         // Shadows sit below all sprites, matching the cached-object path.
         ctx.save();
@@ -708,12 +711,17 @@ export class Renderer {
     _isPlayerBehindOcclusionPatch(obj, profile) {
         const asset = getAsset(obj.assetId);
         if (!asset || profile.points.length < 3) return false;
+        const withinObject = this.player.x >= obj.gx
+            && this.player.x < obj.gx + obj.footprint.w
+            && this.player.y >= obj.gy
+            && this.player.y < obj.gy + obj.footprint.d;
+        if (withinObject && (this.player.z || 0) > 0) return false;
         const origin = cellToScreen(obj.gx, obj.gy);
         const dx = origin.x - asset.anchorX;
         const dy = origin.y - asset.anchorY;
         const playerOrigin = cellToScreen(this.player.x, this.player.y);
         const playerFootX = playerOrigin.x;
-        const playerFootY = playerOrigin.y + 24;
+        const playerFootY = playerOrigin.y + 24 - (this.player.z || 0) * CONFIG.voxel.height;
         const points = profile.points.map(p => ({
             x: dx + (obj.flipH ? 1 - p.x : p.x) * asset.width,
             y: dy + (obj.flipV ? 1 - p.y : p.y) * asset.height,
