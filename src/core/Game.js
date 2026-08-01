@@ -37,10 +37,10 @@ export class Game {
         // `x/y` are rendered positions while `targetX/targetY` keep movement
         // locked to grid cells.
         this.player = {
-            x: 6,
-            y: 6,
-            targetX: 6,
-            targetY: 6,
+            x: 5,
+            y: 5,
+            targetX: 5,
+            targetY: 5,
             moving: false,
             speed: 5, // cells per second
             direction: 'front',
@@ -361,20 +361,21 @@ export class Game {
     }
 
     /**
-     * Buildings visually overhang their back/left grid edges. Reserve one
-     * cell along those sides for the player so they cannot walk underneath
-     * painted walls that a footprint-only collision test does not cover.
+     * Large structures and walls visually extend beyond their logical grid
+     * footprint. Reserve the complete one-cell ring around them so the
+     * player cannot enter an overhanging wall from a side or diagonal gap.
      */
     _isPlayerBlocked(gx, gy) {
         if (this.tileMap.objectAt(gx, gy)) return true;
         for (const obj of this.tileMap.objects) {
-            if (ASSET_INDEX[obj.assetId]?.category !== 'buildings') continue;
+            const def = ASSET_INDEX[obj.assetId];
+            const isWall = ['low_wall', 'corner_wall', 'gate_fence', 'archway', 'blue_railing']
+                .includes(obj.assetId);
+            if (def?.category !== 'buildings' && !isWall) continue;
             const fp = obj.footprint ?? { w: 1, d: 1 };
-            const inLeftBuffer = gx === obj.gx - 1
-                && gy >= obj.gy && gy < obj.gy + fp.d;
-            const inTopBuffer = gy === obj.gy - 1
-                && gx >= obj.gx && gx < obj.gx + fp.w;
-            if (inLeftBuffer || inTopBuffer) return true;
+            const inSafetyRing = gx >= obj.gx - 1 && gx <= obj.gx + fp.w
+                && gy >= obj.gy - 1 && gy <= obj.gy + fp.d;
+            if (inSafetyRing) return true;
         }
         return false;
     }
