@@ -25,14 +25,18 @@ import { loadPlayerSprites } from '../assets/playerSprites.js';
 // to its 4×4 footprint: the front courtyard leads to the left exterior
 // stair, then across the upper roof and the pergola-side lower terrace.
 const VILLA_SURFACES = Object.freeze({
-    // Ground-floor terrace / front courtyard.
+    // Ground-floor terrace and the rooms directly behind the large blue
+    // front door. These are intentionally at ground height: walking through
+    // the door should not make the character jump onto a terrace.
     '0,3': 0, '1,3': 0, '2,3': 0, '3,3': 0,
+    '1,2': 0, '2,2': 0,
     // The exterior flight seen on the left of the villa.
     '0,2': 2, '0,1': 4,
     // Upstairs roof terrace, reached directly from the stair landing.
     '0,0': 6, '1,0': 6, '1,1': 6,
-    // Lower pergola terrace, connected to the upstairs terrace at the right.
-    '2,0': 6, '3,0': 6, '2,1': 6, '3,1': 6, '2,2': 6, '3,2': 6,
+    // The upper-right pergola terrace. The former 2,2 / 3,2 cells project
+    // to the lower right façade in the artwork, not to this terrace.
+    '2,0': 6, '3,0': 6, '2,1': 6, '3,1': 6,
 });
 
 // A character can climb one short flight at a time. Besides making stairs
