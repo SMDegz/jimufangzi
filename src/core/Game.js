@@ -173,6 +173,30 @@ export class Game {
         this.ui?.showToast('世界已重置');
     }
 
+    /** Add an even border around the island without moving it on screen. */
+    expandMap() {
+        const step = CONFIG.grid.expandStep;
+        const padding = step / 2;
+        const nextWidth = this.tileMap.width + step;
+        const nextHeight = this.tileMap.height + step;
+        if (nextWidth > CONFIG.grid.maxSize || nextHeight > CONFIG.grid.maxSize) {
+            this.ui?.showToast(`地图最大可扩展到 ${CONFIG.grid.maxSize} × ${CONFIG.grid.maxSize}`);
+            return;
+        }
+        const shift = this.tileMap.expand(padding);
+        this.player.x += shift.x;
+        this.player.y += shift.y;
+        this.player.targetX += shift.x;
+        this.player.targetY += shift.y;
+        // Shifting existing grid coordinates moves their world position down
+        // by `padding * tile.h`; counter it in screen pixels to keep the
+        // built island visually stationary while its border grows.
+        this.camera.pan(0, -shift.y * CONFIG.tile.h * this.camera.zoom);
+        this.renderer.markDirty();
+        this.save();
+        this.ui?.showToast(`地图已扩展至 ${this.tileMap.width} × ${this.tileMap.height}`);
+    }
+
     /**
      * Carpet the entire grid with grass in one click. Empty cells get a
      * fresh grass tile; cells whose terrain is already something else

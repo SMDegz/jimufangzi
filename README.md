@@ -60,6 +60,7 @@ arranging things until they look right.
 | `Shift` + `S` / `R` | Save / reset |
 | `WASD` / arrow keys | Move the animated character (objects block movement) |
 | `O` | Draw a reusable foreground-occlusion outline: click an object, trace the wall, then double-click / `Enter` to save (`Esc` cancels) |
+| Toolbar “扩展” | Add a 2-cell border on every side of the map (up to 64 × 64) |
 
 ### Touch
 

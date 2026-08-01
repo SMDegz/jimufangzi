@@ -99,6 +99,33 @@ export class TileMap {
         this.objectsVersion++;
     }
 
+    /**
+     * Grow the map on every side while preserving all world contents.
+     * Returns the grid-space displacement applied to the old map.
+     */
+    expand(paddingX, paddingY = paddingX) {
+        const nextWidth = this.width + paddingX * 2;
+        const nextHeight = this.height + paddingY * 2;
+        const terrain = new Array(nextWidth * nextHeight).fill(null);
+        for (let gy = 0; gy < this.height; gy++) {
+            for (let gx = 0; gx < this.width; gx++) {
+                terrain[(gy + paddingY) * nextWidth + gx + paddingX] = this.terrain[gy * this.width + gx];
+            }
+        }
+        for (const obj of this.objects) {
+            obj.gx += paddingX;
+            obj.gy += paddingY;
+        }
+        this.width = nextWidth;
+        this.height = nextHeight;
+        this.terrain = terrain;
+        this._occupancy = new Array(nextWidth * nextHeight).fill(null);
+        for (const obj of this.objects) this._stampOccupancy(obj, obj);
+        this.terrainVersion++;
+        this.objectsVersion++;
+        return { x: paddingX, y: paddingY };
+    }
+
     serialize() {
         return {
             width: this.width,

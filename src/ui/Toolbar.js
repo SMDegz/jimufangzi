@@ -16,6 +16,7 @@ const TOOL_ICONS = {
     save:  drawSaveIcon,
     reset: drawResetIcon,
     occlusion: drawOcclusionIcon,
+    expand: drawExpandIcon,
 };
 
 const TOOL_BUTTONS = [
@@ -27,6 +28,7 @@ const TOOL_BUTTONS = [
     { id: 'save',   label: '保存' },
     { id: 'reset',  label: '重置' },
     { id: 'occlusion', label: '遮挡' },
+    { id: 'expand', label: '扩展' },
 ];
 
 export class Toolbar {
@@ -87,6 +89,7 @@ export class Toolbar {
             case 'reset': this.game.reset();          break;
             case 'fill':  this.game.fillGrass();      break;
             case 'occlusion': this.game.openOcclusionEditor(); break;
+            case 'expand': this.game.expandMap(); break;
         }
     }
 
@@ -370,5 +373,25 @@ function drawOcclusionIcon(ctx) {
     ctx.arc(-3, -2, 4.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillRect(-8, 4, 16, 3);
+    ctx.restore();
+}
+
+function drawExpandIcon(ctx) {
+    ctx.save();
+    ctx.translate(22, 22);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-7, -7, 14, 14);
+    ctx.fillStyle = INK;
+    const arrows = [[0, -14, 0, -7], [14, 0, 7, 0], [0, 14, 0, 7], [-14, 0, -7, 0]];
+    for (const [tx, ty, bx, by] of arrows) {
+        ctx.beginPath();
+        if (tx === 0) {
+            ctx.moveTo(tx, ty); ctx.lineTo(-4, by); ctx.lineTo(4, by);
+        } else {
+            ctx.moveTo(tx, ty); ctx.lineTo(bx, -4); ctx.lineTo(bx, 4);
+        }
+        ctx.closePath(); ctx.fill();
+    }
     ctx.restore();
 }

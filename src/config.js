@@ -10,6 +10,8 @@ export const CONFIG = Object.freeze({
     grid: {
         width: 14,
         height: 14,
+        expandStep: 4,
+        maxSize: 64,
     },
 
     // A "tile" is one cell on the isometric ground grid.
