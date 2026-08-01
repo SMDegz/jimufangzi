@@ -38,6 +38,30 @@
             <div id="palette-grid"></div>
         </section>
 
+        <section id="occlusion-editor" class="hidden" aria-label="前景遮挡编辑器">
+            <header class="occlusion-header">
+                <div>
+                    <p class="occlusion-kicker">前景遮挡编辑器</p>
+                    <h2 id="occlusion-title">编辑前景遮挡</h2>
+                    <p>在物品图片上点击勾出会盖住人物的墙面区域。</p>
+                </div>
+                <button type="button" class="occlusion-close" data-action="close">返回地图</button>
+            </header>
+            <main class="occlusion-workspace">
+                <div class="occlusion-stage"><canvas id="occlusion-canvas"></canvas></div>
+                <aside class="occlusion-controls">
+                    <div class="occlusion-actions">
+                        <button type="button" data-action="undo">撤销一点</button>
+                        <button type="button" data-action="clear">清空轮廓</button>
+                        <button type="button" class="primary" data-action="apply">应用到同类物品</button>
+                    </div>
+                    <p class="occlusion-help">红色区域会在人物走到物体后方时重绘到人物上层。至少点击三个点形成封闭区域。</p>
+                    <nav id="occlusion-tabs"></nav>
+                    <div id="occlusion-grid"></div>
+                </aside>
+            </main>
+        </section>
+
         <section id="hud">
             <div class="hud-row">
                 <div class="hud-clock">

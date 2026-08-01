@@ -57,6 +57,49 @@ html, body {
 }
 
 #app.hidden { display: none; }
+.hidden { display: none !important; }
+
+/* ── Dedicated foreground-occlusion editor ───────────────────── */
+#occlusion-editor {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    padding: 28px;
+    background: linear-gradient(135deg, #f5ecdc, #e6d9bf);
+}
+.occlusion-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; max-width: 1240px; margin: 0 auto 18px; }
+.occlusion-kicker { margin: 0 0 3px; font-size: 12px; font-weight: 700; color: var(--cobalt); letter-spacing: .08em; }
+.occlusion-header h2 { margin: 0; font-size: 24px; color: var(--ink); }
+.occlusion-header p:not(.occlusion-kicker) { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.occlusion-close, .occlusion-actions button { border: 0; border-radius: 9px; padding: 10px 13px; font: inherit; font-size: 13px; font-weight: 650; color: var(--ink); background: var(--cream-2); cursor: pointer; }
+.occlusion-close { background: var(--paper); box-shadow: var(--shadow); }
+.occlusion-workspace { max-width: 1240px; height: calc(100dvh - 142px); min-height: 440px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 18px; }
+.occlusion-stage { min-width: 0; min-height: 0; padding: 14px; border-radius: var(--radius-lg); background: var(--paper); box-shadow: var(--shadow-lg); }
+#occlusion-canvas { display: block; width: 100%; height: 100%; border-radius: 12px; cursor: crosshair; }
+.occlusion-controls { min-height: 0; display: flex; flex-direction: column; padding: 12px; border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
+.occlusion-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.occlusion-actions .primary { grid-column: span 2; color: #fff; background: var(--cobalt); }
+.occlusion-help { margin: 12px 2px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+#occlusion-tabs { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 8px; }
+.occlusion-tab { flex: 0 0 auto; border: 0; border-radius: 7px; padding: 7px 8px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.occlusion-tab.active { background: var(--cobalt-light); color: var(--cobalt); font-weight: 700; }
+#occlusion-grid { min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding-right: 2px; }
+.occlusion-swatch { min-width: 0; min-height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 3px; border: 1px solid var(--line); border-radius: 9px; background: #fffdf8; color: var(--ink-soft); font: inherit; font-size: 11px; cursor: pointer; overflow: hidden; }
+.occlusion-swatch:hover, .occlusion-swatch.selected { border-color: var(--cobalt); background: var(--cobalt-light); }
+.occlusion-swatch canvas { max-width: 62px; max-height: 62px; object-fit: contain; }
+
+@media (max-width: 720px) {
+    #occlusion-editor { padding: 14px; }
+    .occlusion-header h2 { font-size: 18px; }
+    .occlusion-header p:not(.occlusion-kicker) { display: none; }
+    .occlusion-workspace { height: calc(100dvh - 92px); grid-template-columns: minmax(0, 1fr) 142px; gap: 10px; }
+    .occlusion-controls { padding: 8px; }
+    .occlusion-actions { grid-template-columns: 1fr; }
+    .occlusion-actions .primary { grid-column: auto; }
+    .occlusion-actions button { padding: 8px 5px; font-size: 11px; }
+    .occlusion-help { font-size: 10px; margin: 8px 0; }
+    #occlusion-grid { grid-template-columns: 1fr; }
+}
 
 #game-canvas {
     position: fixed;

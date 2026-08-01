@@ -422,7 +422,7 @@ export class InputManager {
             '5': () => this.game.setCategory('buildings'),
             'e': () => this.game.setTool(this.game.tool === 'erase' ? 'place' : 'erase'),
             'g': () => this.game.toggleGrid(),
-            'o': () => this.game.toggleOcclusionEditor(),
+            'o': () => this.game.openOcclusionEditor(),
             'r': () => this.game.reset(),
             'h': () => this.game.toggleFlipH(),
             'v': () => this.game.toggleFlipV(),

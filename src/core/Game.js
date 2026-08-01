@@ -320,6 +320,26 @@ export class Game {
         this.ui?.showToast('遮挡绘制：先点击围墙，再沿前景墙面逐点勾边');
     }
 
+    /** Open the standalone asset editor instead of asking for map clicks. */
+    openOcclusionEditor() {
+        if (this.isOcclusionEditing()) this.cancelOcclusionEdit();
+        this.ui?.occlusionEditor.open(this.selectedAssetId);
+    }
+
+    setOcclusionProfile(assetId, points) {
+        this.occlusionProfiles[assetId] = { points: points.map(p => ({ x: p.x, y: p.y })) };
+        this.renderer.setOcclusionProfiles(this.occlusionProfiles);
+        this.save();
+        this.ui?.showToast('前景遮挡轮廓已保存并应用到同类物品');
+    }
+
+    removeOcclusionProfile(assetId) {
+        delete this.occlusionProfiles[assetId];
+        this.renderer.setOcclusionProfiles(this.occlusionProfiles);
+        this.save();
+        this.ui?.showToast('已移除该物品的前景遮挡轮廓');
+    }
+
     cancelOcclusionEdit() {
         if (!this.occlusionEdit) return;
         this.occlusionEdit = null;

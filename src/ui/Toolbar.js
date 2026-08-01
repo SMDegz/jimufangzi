@@ -15,6 +15,7 @@ const TOOL_ICONS = {
     grid:  drawGridIcon,
     save:  drawSaveIcon,
     reset: drawResetIcon,
+    occlusion: drawOcclusionIcon,
 };
 
 const TOOL_BUTTONS = [
@@ -25,6 +26,7 @@ const TOOL_BUTTONS = [
     { id: 'grid',   label: '网格' },
     { id: 'save',   label: '保存' },
     { id: 'reset',  label: '重置' },
+    { id: 'occlusion', label: '遮挡' },
 ];
 
 export class Toolbar {
@@ -84,6 +86,7 @@ export class Toolbar {
             case 'save':  this.game.save();           break;
             case 'reset': this.game.reset();          break;
             case 'fill':  this.game.fillGrass();      break;
+            case 'occlusion': this.game.openOcclusionEditor(); break;
         }
     }
 
@@ -354,5 +357,18 @@ function drawResetIcon(ctx) {
     ctx.closePath();
     ctx.fill();
 
+    ctx.restore();
+}
+
+function drawOcclusionIcon(ctx) {
+    ctx.save();
+    ctx.translate(22, 22);
+    ctx.fillStyle = INK;
+    ctx.fillRect(-11, -9, 22, 18);
+    ctx.fillStyle = PAPER;
+    ctx.beginPath();
+    ctx.arc(-3, -2, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-8, 4, 16, 3);
     ctx.restore();
 }

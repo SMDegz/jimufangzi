@@ -7,6 +7,7 @@
 import { Toolbar } from './Toolbar.js';
 import { AssetPalette } from './AssetPalette.js';
 import { HUD } from './HUD.js';
+import { OcclusionEditor } from './OcclusionEditor.js';
 import { playUiClick } from './Audio.js';
 
 export class UIManager {
@@ -19,6 +20,7 @@ export class UIManager {
             game,
         );
         this.hud = new HUD(game);
+        this.occlusionEditor = new OcclusionEditor(game, document.getElementById('occlusion-editor'));
         this.toast = document.getElementById('toast');
 
         // The Controls cheatsheet is a native <details> disclosure: clicking
@@ -33,6 +35,7 @@ export class UIManager {
         game.toolbar = this.toolbar;
         game.palette = this.palette;
         game.hud = this.hud;
+        game.occlusionEditor = this.occlusionEditor;
     }
 
     update() {
