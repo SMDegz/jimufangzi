@@ -13,6 +13,8 @@ export class HUD {
         this.aoToggle  = document.getElementById('toggle-ao');
         this.gridToggle= document.getElementById('toggle-grid');
         this.bordersToggle = document.getElementById('toggle-borders');
+        this.navDebugToggle = document.getElementById('toggle-nav-debug');
+        this.navDebugPanel = document.getElementById('nav-debug-panel');
 
         this.aoToggle.addEventListener('change', () => {
             playUiClick();
@@ -29,6 +31,10 @@ export class HUD {
             playUiClick();
             game.renderer.showBorders = this.bordersToggle.checked;
             game.renderer.markDirty();
+        });
+        this.navDebugToggle.addEventListener('change', () => {
+            playUiClick();
+            game.setNavigationDebug(this.navDebugToggle.checked);
         });
 
         this._tick();
@@ -47,5 +53,12 @@ export class HUD {
         this.gridToggle.checked = this.game.renderer.showGrid;
         this.aoToggle.checked   = this.game.renderer.ambientOcclusion;
         this.bordersToggle.checked = this.game.renderer.showBorders;
+        this.navDebugToggle.checked = !!this.game.navigationDebug;
+    }
+
+    setNavigationDebug(text, visible) {
+        if (!this.navDebugPanel) return;
+        this.navDebugPanel.textContent = text;
+        this.navDebugPanel.classList.toggle('hidden', !visible);
     }
 }

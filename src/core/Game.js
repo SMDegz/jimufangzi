@@ -62,6 +62,8 @@ export class Game {
         this.input = new InputManager(canvas, this.camera, this);
         this.occlusionProfiles = {};
         this.navigationProfiles = {};
+        this.navigationDebug = false;
+        this.navigationDebugText = '打开后按方向键，显示导航判定';
         this.occlusionEdit = null;
         this.renderer.setOcclusionProfiles(this.occlusionProfiles);
         this.renderer.setNavigationProfiles(this.navigationProfiles);
@@ -190,10 +192,32 @@ export class Game {
     }
 
     toggleNavigationDebug() {
-        this.renderer.showNavigationDebug = !this.renderer.showNavigationDebug;
+        this.setNavigationDebug(!this.navigationDebug);
+    }
+
+    setNavigationDebug(enabled) {
+        this.navigationDebug = !!enabled;
+        this.renderer.showNavigationDebug = this.navigationDebug;
         this.renderer.markDirty();
+        this.ui?.hud?.setNavigationDebug(this.navigationDebugText, this.navigationDebug);
         this.ui?.update();
-        this.ui?.showToast(this.renderer.showNavigationDebug ? '已显示建筑绘制标记' : '已隐藏建筑绘制标记');
+    }
+
+    _reportNavigation(reason, fromX, fromY, toX, toY, targetZ = null) {
+        if (!this.navigationDebug) return;
+        const obj = this.tileMap.objectAt(toX, toY) ?? this.tileMap.objectAt(fromX, fromY);
+        const profile = obj ? this._navigationProfileFor(obj) : null;
+        const local = obj ? `${toX - obj.gx},${toY - obj.gy}` : '外部';
+        this.navigationDebugText = [
+            `结果: ${reason}`,
+            `移动: ${fromX},${fromY} → ${toX},${toY}`,
+            `目标: ${obj?.assetId ?? '无'} / 局部格 ${local}`,
+            `高度: 当前 ${this.player.targetZ} → ${targetZ ?? '-'}`,
+            `通行格: ${profile ? Object.keys(profile.surfaces).join(' ') || '无' : '无'}`,
+            `门边: ${profile ? [...profile.doors].join(' ') || '无' : '无'}`,
+        ].join('\n');
+        console.info('[navigation-debug]', this.navigationDebugText);
+        this.ui?.hud?.setNavigationDebug(this.navigationDebugText, true);
     }
 
     save() {
@@ -394,10 +418,11 @@ export class Game {
         if (p.moving) return;
         const gx = p.targetX + dx;
         const gy = p.targetY + dy;
-        if (!this.tileMap.inBounds(gx, gy) || this._isPlayerBlocked(gx, gy)) return;
-        if (!this._canCrossVillaBoundary(p.targetX, p.targetY, gx, gy)) return;
+        if (!this.tileMap.inBounds(gx, gy)) { this._reportNavigation('拒绝：地图边界', p.targetX, p.targetY, gx, gy); return; }
+        if (this._isPlayerBlocked(gx, gy)) { this._reportNavigation('拒绝：建筑或围墙碰撞', p.targetX, p.targetY, gx, gy); return; }
+        if (!this._canCrossVillaBoundary(p.targetX, p.targetY, gx, gy)) { this._reportNavigation('拒绝：不是已画的门边', p.targetX, p.targetY, gx, gy); return; }
         const targetZ = this._tileHeight(gx, gy);
-        if (Math.abs(targetZ - p.targetZ) > MAX_PLAYER_STEP_HEIGHT) return;
+        if (Math.abs(targetZ - p.targetZ) > MAX_PLAYER_STEP_HEIGHT) { this._reportNavigation('拒绝：高度差超过 2', p.targetX, p.targetY, gx, gy, targetZ); return; }
         if (dx < 0) p.direction = 'left';
         if (dx > 0) p.direction = 'right';
         if (dy < 0) p.direction = 'back';
@@ -406,6 +431,7 @@ export class Game {
         p.targetY = gy;
         p.targetZ = targetZ;
         p.moving = true;
+        this._reportNavigation('允许移动', p.targetX - dx, p.targetY - dy, gx, gy, targetZ);
         this.renderer.markDirty();
     }
 

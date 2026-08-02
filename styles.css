@@ -419,6 +419,7 @@ html, body {
     font-size: 11px;
 }
 .hud-row { display: flex; align-items: center; gap: 5px; }
+#nav-debug-panel { margin: 8px 0 0; max-width: 260px; white-space: pre-wrap; color: #0e4b79; font: 10px/1.45 ui-monospace, Consolas, monospace; }
 .hud-clock {
     display: flex;
     align-items: center;
