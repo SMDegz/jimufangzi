@@ -17,7 +17,7 @@ export class OcclusionEditor {
         this.imageRect = null; this.hover = null; this.lastCell = null;
         this._build();
     }
-    _empty() { return { surfaces: {}, doors: [], masks: [] }; }
+    _empty() { return { surfaces: {}, doors: [], anchors: {}, masks: [] }; }
     _build() {
         for (const category of EDITABLE) {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'occlusion-tab'; b.textContent = LABELS[category];
@@ -43,7 +43,7 @@ export class OcclusionEditor {
         const def = ASSET_MANIFEST.find(a => a.id === id); if (!def) return;
         this.assetId = id; this.category = def.category; this.points = [];
         const old = this.game.navigationProfiles[id] ?? this._empty();
-        this.profile = { surfaces: { ...(old.surfaces ?? {}) }, doors: [...(old.doors ?? [])], masks: (old.masks ?? []).map(r => r.map(p => ({ ...p }))) };
+        this.profile = { surfaces: { ...(old.surfaces ?? {}) }, doors: [...(old.doors ?? [])], anchors: Object.fromEntries(Object.entries(old.anchors ?? {}).map(([key, p]) => [key, { ...p }])), masks: (old.masks ?? []).map(r => r.map(p => ({ ...p }))) };
         this.title.textContent = `绘制建筑通行与遮罩：${def.name}`; this._syncMode(); this._renderPalette(); this._paint();
     }
     _syncMode() { this.root.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === this.mode)); }
@@ -61,9 +61,9 @@ export class OcclusionEditor {
     _normalise(p) { const r = this.imageRect; if (!r || p.x < r.x || p.x > r.x + r.w || p.y < r.y || p.y > r.y + r.h) return null; return { x: (p.x - r.x) / r.w, y: (p.y - r.y) / r.h }; }
     _cellAt(p) { const a = allAssets()[this.assetId], fp = a?.footprint; if (!p || !a || !fp) return null; let best = null, dBest = Infinity; for (let x = 0; x < fp.w; x++) for (let y = 0; y < fp.d; y++) { const q = this._cellCenter(x, y, a); const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2; if (d < dBest) { dBest = d; best = [x, y]; } } return best; }
     _cellCenter(x, y, a) { return { x: (a.anchorX + (x - y) * 16) / a.width, y: (a.anchorY + (x + y) * 16 + 16) / a.height }; }
-    _add(e) { const p = this._normalise(this._event(e)); if (!p) return; if (this.mode === 'mask') { this.points.push(p); this._paint(); return; } const cell = this._cellAt(p); if (!cell) return; const key = cell.join(','); this.lastCell = key; if (this.mode === 'walk') this.profile.surfaces[key] = 0; else if (this.mode === 'stairs') this.profile.surfaces[key] = this.height === 'auto' ? this._autoStairHeight(cell) : this.height; else { const [dx, dy] = DELTAS[this.edge]; const outside = `${cell[0] + dx},${cell[1] + dy}`; this.profile.doors = this.profile.doors.filter(edge => !edge.includes(key)); this.profile.doors.push(`${outside}>${key}`, `${key}>${outside}`); } this._paint(); }
+    _add(e) { const p = this._normalise(this._event(e)); if (!p) return; if (this.mode === 'mask') { this.points.push(p); this._paint(); return; } const cell = this._cellAt(p); if (!cell) return; const key = cell.join(','); this.lastCell = key; if (this.mode === 'walk') this.profile.surfaces[key] = 0; else if (this.mode === 'stairs') this.profile.surfaces[key] = this.height === 'auto' ? this._autoStairHeight(cell) : this.height; else { const [dx, dy] = DELTAS[this.edge]; const outside = `${cell[0] + dx},${cell[1] + dy}`; this.profile.doors = this.profile.doors.filter(edge => !edge.includes(key)); this.profile.doors.push(`${outside}>${key}`, `${key}>${outside}`); } if (this.mode !== 'door') this.profile.anchors[key] = { x: p.x, y: p.y }; this._paint(); }
     _autoStairHeight([x, y]) { const adjacent = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].map(([nx, ny]) => this.profile.surfaces[`${nx},${ny}`]).filter(Number.isFinite); return adjacent.length ? Math.max(...adjacent) + 2 : 2; }
-    _undo() { if (this.mode === 'mask') this.points.pop(); else if (this.lastCell) { delete this.profile.surfaces[this.lastCell]; this.profile.doors = this.profile.doors.filter(e => !e.includes(this.lastCell)); } this._paint(); }
+    _undo() { if (this.mode === 'mask') this.points.pop(); else if (this.lastCell) { delete this.profile.surfaces[this.lastCell]; delete this.profile.anchors[this.lastCell]; this.profile.doors = this.profile.doors.filter(e => !e.includes(this.lastCell)); } this._paint(); }
     _clear() { if (this.mode === 'mask') this.points = []; else if (this.mode === 'door') this.profile.doors = []; else this.profile.surfaces = {}; this._paint(); }
     _finishMaskRegion() { if (this.mode === 'mask' && this.points.length >= 3) this.profile.masks.push(this.points.map(p => ({ ...p }))); this.points = []; }
     _beginNewMask() {

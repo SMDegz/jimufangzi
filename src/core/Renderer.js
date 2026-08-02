@@ -835,7 +835,7 @@ export class Renderer {
     _drawPlayerShadow(ctx) {
         const p = this.player;
         if (!p) return;
-        const pos = cellToScreen(p.x, p.y);
+        const pos = this._playerScreenPosition();
         ctx.save();
         ctx.translate(pos.x, pos.y + TH / 2 + 5);
         ctx.scale(1, 0.42);
@@ -849,8 +849,7 @@ export class Renderer {
     _drawPlayer(ctx) {
         const p = this.player;
         if (!p) return;
-        const pos = cellToScreen(p.x, p.y);
-        pos.y -= (p.z || 0) * CONFIG.voxel.height;
+        const pos = this._playerScreenPosition();
 
         const frames = p.frames?.[p.direction];
         if (frames?.length) {
@@ -906,6 +905,25 @@ export class Renderer {
         ctx.fillStyle = '#15557e';
         ctx.fill();
         ctx.stroke();
+    }
+
+    _playerScreenPosition() {
+        const p = this.player;
+        const obj = this.tileMap.objectAt(p.targetX, p.targetY);
+        const profile = obj && this.navigationProfiles[obj.assetId];
+        const key = obj && `${p.targetX - obj.gx},${p.targetY - obj.gy}`;
+        const anchor = key && profile?.anchors?.[key];
+        if (obj && anchor) {
+            const asset = getAsset(obj.assetId);
+            const origin = cellToScreen(obj.gx, obj.gy);
+            return {
+                x: origin.x - asset.anchorX + anchor.x * asset.width,
+                y: origin.y - asset.anchorY + anchor.y * asset.height,
+            };
+        }
+        const pos = cellToScreen(p.x, p.y);
+        pos.y -= (p.z || 0) * CONFIG.voxel.height;
+        return pos;
     }
 
     /* ── Live overlay (animations + hover + preview) ──────────── */

@@ -514,6 +514,7 @@ export class Game {
         this.navigationProfiles[assetId] = {
             surfaces: { ...(profile.surfaces ?? {}) },
             doors: [...(profile.doors ?? [])],
+            anchors: Object.fromEntries(Object.entries(profile.anchors ?? {}).map(([key, p]) => [key, { x: p.x, y: p.y }])),
             masks: (profile.masks ?? []).map(region => region.map(p => ({ x: p.x, y: p.y }))),
         };
         if (profile.masks?.length) this.occlusionProfiles[assetId] = { regions: this.navigationProfiles[assetId].masks };
