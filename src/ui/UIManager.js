@@ -7,7 +7,7 @@
 import { Toolbar } from './Toolbar.js';
 import { AssetPalette } from './AssetPalette.js';
 import { HUD } from './HUD.js';
-import { OcclusionEditor } from './OcclusionEditor.js';
+import { OcclusionEditor } from './OcclusionEditor.js?v=navigation-editor-2';
 import { playUiClick } from './Audio.js';
 
 export class UIManager {

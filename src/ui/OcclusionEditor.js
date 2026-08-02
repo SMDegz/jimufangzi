@@ -86,7 +86,8 @@ export class OcclusionEditor {
         const fp = a.footprint ?? { w: 1, d: 1 }; for (let x = 0; x < fp.w; x++) for (let y = 0; y < fp.d; y++) diamond([x, y], 'rgba(255,255,255,.04)', 'rgba(27,91,168,.22)');
         for (const [key, z] of Object.entries(this.profile.surfaces)) { diamond(key.split(',').map(Number), z ? 'rgba(255,188,66,.32)' : 'rgba(47,201,166,.28)', z ? '#db8b00' : '#118f72'); }
         for (const edge of this.profile.doors) { const [, to] = edge.split('>'); if (!to || edge.indexOf('>') < 0) continue; const cell = to.split(',').map(Number); if (cell[0] < 0 || cell[1] < 0 || cell[0] >= fp.w || cell[1] >= fp.d) continue; const q = this._toCanvas(this._cellCenter(cell[0], cell[1], a)); ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, Math.PI * 2); ctx.strokeStyle = '#1676d2'; ctx.lineWidth = 3; ctx.stroke(); }
-        const drawMask = points => { if (points.length < 2) return; const q = this._toCanvas(points[0]); ctx.beginPath(); ctx.moveTo(q.x, q.y); for (let i = 1; i < points.length; i++) { const p = this._toCanvas(points[i]); ctx.lineTo(p.x, p.y); } if (points.length >= 3) { ctx.closePath(); ctx.fillStyle = 'rgba(243,77,112,.22)'; ctx.fill(); } ctx.strokeStyle = '#f34d70'; ctx.lineWidth = 3; ctx.stroke(); };
-        for (const region of this.profile.masks) drawMask(region); drawMask(this.points);
+        const drawMask = (points, color, fill) => { if (points.length < 2) return; const q = this._toCanvas(points[0]); ctx.beginPath(); ctx.moveTo(q.x, q.y); for (let i = 1; i < points.length; i++) { const p = this._toCanvas(points[i]); ctx.lineTo(p.x, p.y); } if (points.length >= 3) { ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); } ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke(); };
+        for (const region of this.profile.masks) drawMask(region, '#7956d8', 'rgba(121,86,216,.20)');
+        drawMask(this.points, '#f34d70', 'rgba(243,77,112,.22)');
     }
 }
