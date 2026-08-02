@@ -23,11 +23,12 @@ export class OcclusionEditor {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'occlusion-tab'; b.textContent = LABELS[category];
             b.addEventListener('click', () => { playUiClick(); this.category = category; this._renderPalette(); }); this.tabs.appendChild(b);
         }
-        this.root.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { this.mode = b.dataset.mode; this.points = []; this._syncMode(); this._paint(); }));
+        this.root.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { this._finishMaskRegion(); this.mode = b.dataset.mode; this.points = []; this._syncMode(); this._paint(); }));
         this.root.querySelector('[data-action="height"]').addEventListener('change', e => { this.height = +e.target.value; });
         this.root.querySelector('[data-action="edge"]').addEventListener('change', e => { this.edge = e.target.value; });
         this.root.querySelector('[data-action="undo"]').addEventListener('click', () => this._undo());
         this.root.querySelector('[data-action="clear"]').addEventListener('click', () => this._clear());
+        this.root.querySelector('[data-action="new-mask"]').addEventListener('click', () => { this._finishMaskRegion(); this._paint(); });
         this.root.querySelector('[data-action="apply"]').addEventListener('click', () => this._apply());
         this.root.querySelector('[data-action="close"]').addEventListener('click', () => this.close());
         this.canvas.addEventListener('pointerdown', e => this._add(e));
@@ -63,7 +64,8 @@ export class OcclusionEditor {
     _add(e) { const p = this._normalise(this._event(e)); if (!p) return; if (this.mode === 'mask') { this.points.push(p); this._paint(); return; } const cell = this._cellAt(p); if (!cell) return; const key = cell.join(','); this.lastCell = key; if (this.mode === 'walk' || this.mode === 'stairs') this.profile.surfaces[key] = this.mode === 'walk' ? 0 : this.height; else { const [dx, dy] = DELTAS[this.edge]; const outside = `${cell[0] + dx},${cell[1] + dy}`; this.profile.doors = this.profile.doors.filter(edge => !edge.includes(key)); this.profile.doors.push(`${outside}>${key}`, `${key}>${outside}`); } this._paint(); }
     _undo() { if (this.mode === 'mask') this.points.pop(); else if (this.lastCell) { delete this.profile.surfaces[this.lastCell]; this.profile.doors = this.profile.doors.filter(e => !e.includes(this.lastCell)); } this._paint(); }
     _clear() { if (this.mode === 'mask') this.points = []; else if (this.mode === 'door') this.profile.doors = []; else this.profile.surfaces = {}; this._paint(); }
-    _apply() { if (this.mode === 'mask' && this.points.length >= 3) this.profile.masks.push(this.points.map(p => ({ ...p }))); this.game.setNavigationProfile(this.assetId, this.profile); this.close(); }
+    _finishMaskRegion() { if (this.mode === 'mask' && this.points.length >= 3) this.profile.masks.push(this.points.map(p => ({ ...p }))); this.points = []; }
+    _apply() { this._finishMaskRegion(); this.game.setNavigationProfile(this.assetId, this.profile); this.close(); }
     _toCanvas(p) { return { x: this.imageRect.x + p.x * this.imageRect.w, y: this.imageRect.y + p.y * this.imageRect.h }; }
     _diamond(cell, a) { const c = this._cellCenter(cell[0], cell[1], a), sx = 16 / a.width * this.imageRect.w, sy = 16 / a.height * this.imageRect.h, q = this._toCanvas(c); return [[q.x, q.y - sy], [q.x + sx, q.y], [q.x, q.y + sy], [q.x - sx, q.y]]; }
     _paint() {
