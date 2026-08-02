@@ -39,6 +39,14 @@ const VILLA_SURFACES = Object.freeze({
     '2,0': 6, '3,0': 6, '2,1': 6, '3,1': 6,
 });
 
+// Only these footprint-boundary edges are doors. Surface cells along the
+// courtyard are walkable after entering, but must not turn every adjacent
+// wall segment into an entrance. Coordinates are local to the villa.
+const VILLA_ENTRY_EDGES = new Set([
+    '0,4>0,3', '0,3>0,4', // small blue courtyard gate
+    '3,4>3,3', '3,3>3,4', // large ground-floor blue front door
+]);
+
 // A character can climb one short flight at a time. Besides making stairs
 // feel like stairs, this prevents entering an elevated terrace directly from
 // an adjacent ground cell that has no connecting steps.
@@ -375,6 +383,7 @@ export class Game {
         const gx = p.targetX + dx;
         const gy = p.targetY + dy;
         if (!this.tileMap.inBounds(gx, gy) || this._isPlayerBlocked(gx, gy)) return;
+        if (!this._canCrossVillaBoundary(p.targetX, p.targetY, gx, gy)) return;
         const targetZ = this._tileHeight(gx, gy);
         if (Math.abs(targetZ - p.targetZ) > MAX_PLAYER_STEP_HEIGHT) return;
         if (dx < 0) p.direction = 'left';
@@ -422,6 +431,24 @@ export class Game {
         // height layer gives the character a visible climb without changing
         // the builder's terrain format.
         return this.tileMap.getTerrain(gx, gy) === 'stairs' ? 2 : 0;
+    }
+
+    _canCrossVillaBoundary(fromX, fromY, toX, toY) {
+        const villa = [
+            this.tileMap.objectAt(fromX, fromY),
+            this.tileMap.objectAt(toX, toY),
+        ].find(obj => obj?.assetId === 'villa');
+        if (!villa) return true;
+
+        const toLocal = `${toX - villa.gx},${toY - villa.gy}`;
+        const fromLocal = `${fromX - villa.gx},${fromY - villa.gy}`;
+        const fromIsSurface = Object.hasOwn(VILLA_SURFACES, fromLocal);
+        const toIsSurface = Object.hasOwn(VILLA_SURFACES, toLocal);
+        // Both cells are part of the villa route, so this is movement inside
+        // the building. A crossing between a route cell and the exterior is
+        // legal only through one of the explicitly painted blue doors.
+        if (fromIsSurface === toIsSurface) return true;
+        return VILLA_ENTRY_EDGES.has(`${fromLocal}>${toLocal}`);
     }
 
     _structureHeightAt(gx, gy) {
