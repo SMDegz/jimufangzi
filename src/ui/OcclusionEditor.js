@@ -28,7 +28,7 @@ export class OcclusionEditor {
         this.root.querySelector('[data-action="edge"]').addEventListener('change', e => { this.edge = e.target.value; });
         this.root.querySelector('[data-action="undo"]').addEventListener('click', () => this._undo());
         this.root.querySelector('[data-action="clear"]').addEventListener('click', () => this._clear());
-        this.root.querySelector('[data-action="new-mask"]').addEventListener('click', () => { this._finishMaskRegion(); this._paint(); });
+        this.root.querySelector('[data-action="new-mask"]').addEventListener('click', () => this._beginNewMask());
         this.root.querySelector('[data-action="apply"]').addEventListener('click', () => this._apply());
         this.root.querySelector('[data-action="close"]').addEventListener('click', () => this.close());
         this.canvas.addEventListener('pointerdown', e => this._add(e));
@@ -65,6 +65,17 @@ export class OcclusionEditor {
     _undo() { if (this.mode === 'mask') this.points.pop(); else if (this.lastCell) { delete this.profile.surfaces[this.lastCell]; this.profile.doors = this.profile.doors.filter(e => !e.includes(this.lastCell)); } this._paint(); }
     _clear() { if (this.mode === 'mask') this.points = []; else if (this.mode === 'door') this.profile.doors = []; else this.profile.surfaces = {}; this._paint(); }
     _finishMaskRegion() { if (this.mode === 'mask' && this.points.length >= 3) this.profile.masks.push(this.points.map(p => ({ ...p }))); this.points = []; }
+    _beginNewMask() {
+        if (this.mode === 'mask' && this.points.length > 0 && this.points.length < 3) {
+            this.game.ui?.showToast('当前遮罩至少需要 3 个点；请补点或清空当前区域');
+            return;
+        }
+        this._finishMaskRegion();
+        this.mode = 'mask';
+        this._syncMode();
+        this._paint();
+        this.game.ui?.showToast(`开始第 ${this.profile.masks.length + 1} 个遮罩区域`);
+    }
     _apply() { this._finishMaskRegion(); this.game.setNavigationProfile(this.assetId, this.profile); this.close(); }
     _toCanvas(p) { return { x: this.imageRect.x + p.x * this.imageRect.w, y: this.imageRect.y + p.y * this.imageRect.h }; }
     _diamond(cell, a) { const c = this._cellCenter(cell[0], cell[1], a), sx = 16 / a.width * this.imageRect.w, sy = 16 / a.height * this.imageRect.h, q = this._toCanvas(c); return [[q.x, q.y - sy], [q.x + sx, q.y], [q.x, q.y + sy], [q.x - sx, q.y]]; }
