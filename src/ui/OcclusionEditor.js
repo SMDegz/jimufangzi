@@ -13,7 +13,7 @@ export class OcclusionEditor {
         this.canvas = root.querySelector('#occlusion-canvas'); this.ctx = this.canvas.getContext('2d');
         this.tabs = root.querySelector('#occlusion-tabs'); this.grid = root.querySelector('#occlusion-grid');
         this.title = root.querySelector('#occlusion-title'); this.category = 'buildings'; this.assetId = null;
-        this.mode = 'walk'; this.height = 0; this.edge = 'bottom'; this.points = []; this.profile = this._empty();
+        this.mode = 'walk'; this.height = 'auto'; this.edge = 'bottom'; this.points = []; this.profile = this._empty();
         this.imageRect = null; this.hover = null; this.lastCell = null;
         this._build();
     }
@@ -24,7 +24,7 @@ export class OcclusionEditor {
             b.addEventListener('click', () => { playUiClick(); this.category = category; this._renderPalette(); }); this.tabs.appendChild(b);
         }
         this.root.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { this._finishMaskRegion(); this.mode = b.dataset.mode; this.points = []; this._syncMode(); this._paint(); }));
-        this.root.querySelector('[data-action="height"]').addEventListener('change', e => { this.height = +e.target.value; });
+        this.root.querySelector('[data-action="height"]').addEventListener('change', e => { this.height = e.target.value === 'auto' ? 'auto' : +e.target.value; });
         this.root.querySelector('[data-action="edge"]').addEventListener('change', e => { this.edge = e.target.value; });
         this.root.querySelector('[data-action="undo"]').addEventListener('click', () => this._undo());
         this.root.querySelector('[data-action="clear"]').addEventListener('click', () => this._clear());
@@ -61,7 +61,8 @@ export class OcclusionEditor {
     _normalise(p) { const r = this.imageRect; if (!r || p.x < r.x || p.x > r.x + r.w || p.y < r.y || p.y > r.y + r.h) return null; return { x: (p.x - r.x) / r.w, y: (p.y - r.y) / r.h }; }
     _cellAt(p) { const a = allAssets()[this.assetId], fp = a?.footprint; if (!p || !a || !fp) return null; let best = null, dBest = Infinity; for (let x = 0; x < fp.w; x++) for (let y = 0; y < fp.d; y++) { const q = this._cellCenter(x, y, a); const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2; if (d < dBest) { dBest = d; best = [x, y]; } } return best; }
     _cellCenter(x, y, a) { return { x: (a.anchorX + (x - y) * 16) / a.width, y: (a.anchorY + (x + y) * 16 + 16) / a.height }; }
-    _add(e) { const p = this._normalise(this._event(e)); if (!p) return; if (this.mode === 'mask') { this.points.push(p); this._paint(); return; } const cell = this._cellAt(p); if (!cell) return; const key = cell.join(','); this.lastCell = key; if (this.mode === 'walk' || this.mode === 'stairs') this.profile.surfaces[key] = this.mode === 'walk' ? 0 : this.height; else { const [dx, dy] = DELTAS[this.edge]; const outside = `${cell[0] + dx},${cell[1] + dy}`; this.profile.doors = this.profile.doors.filter(edge => !edge.includes(key)); this.profile.doors.push(`${outside}>${key}`, `${key}>${outside}`); } this._paint(); }
+    _add(e) { const p = this._normalise(this._event(e)); if (!p) return; if (this.mode === 'mask') { this.points.push(p); this._paint(); return; } const cell = this._cellAt(p); if (!cell) return; const key = cell.join(','); this.lastCell = key; if (this.mode === 'walk') this.profile.surfaces[key] = 0; else if (this.mode === 'stairs') this.profile.surfaces[key] = this.height === 'auto' ? this._autoStairHeight(cell) : this.height; else { const [dx, dy] = DELTAS[this.edge]; const outside = `${cell[0] + dx},${cell[1] + dy}`; this.profile.doors = this.profile.doors.filter(edge => !edge.includes(key)); this.profile.doors.push(`${outside}>${key}`, `${key}>${outside}`); } this._paint(); }
+    _autoStairHeight([x, y]) { const adjacent = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].map(([nx, ny]) => this.profile.surfaces[`${nx},${ny}`]).filter(Number.isFinite); return adjacent.length ? Math.max(...adjacent) + 2 : 2; }
     _undo() { if (this.mode === 'mask') this.points.pop(); else if (this.lastCell) { delete this.profile.surfaces[this.lastCell]; this.profile.doors = this.profile.doors.filter(e => !e.includes(this.lastCell)); } this._paint(); }
     _clear() { if (this.mode === 'mask') this.points = []; else if (this.mode === 'door') this.profile.doors = []; else this.profile.surfaces = {}; this._paint(); }
     _finishMaskRegion() { if (this.mode === 'mask' && this.points.length >= 3) this.profile.masks.push(this.points.map(p => ({ ...p }))); this.points = []; }
