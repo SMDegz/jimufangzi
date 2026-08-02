@@ -79,6 +79,10 @@ html, body {
 .occlusion-controls { min-height: 0; display: flex; flex-direction: column; padding: 12px; border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
 .occlusion-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .occlusion-actions .primary { grid-column: span 2; color: #fff; background: var(--cobalt); }
+.nav-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.nav-modes button, .nav-height select { border: 1px solid var(--line); border-radius: 7px; background: #fffdf8; color: var(--ink); font: inherit; font-size: 12px; padding: 7px; cursor: pointer; }
+.nav-modes button.active { color: #fff; background: var(--cobalt); border-color: var(--cobalt); }
+.nav-height { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 8px; color: var(--muted); font-size: 11px; }
 .occlusion-help { margin: 12px 2px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 #occlusion-tabs { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 8px; }
 .occlusion-tab { flex: 0 0 auto; border: 0; border-radius: 7px; padding: 7px 8px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }

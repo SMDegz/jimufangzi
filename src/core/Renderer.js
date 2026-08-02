@@ -84,6 +84,8 @@ export class Renderer {
         this.tileMap = tileMap;
         this.player = null;
         this.occlusionProfiles = {};
+        this.navigationProfiles = {};
+        this.showNavigationDebug = false;
         this.occlusionEdit = null;
 
         // Visibility toggles
@@ -147,6 +149,11 @@ export class Renderer {
 
     setOcclusionProfiles(profiles) {
         this.occlusionProfiles = profiles || {};
+        this.markDirty();
+    }
+
+    setNavigationProfiles(profiles) {
+        this.navigationProfiles = profiles || {};
         this.markDirty();
     }
 
@@ -693,7 +700,7 @@ export class Renderer {
             // Objects with a profile are first painted behind the character;
             // their user-drawn foreground patch is selectively repainted
             // afterward only when the character is on the back side.
-            if (this.occlusionProfiles[obj.assetId]?.points?.length >= 3) occluders.push(item);
+            if (this._occlusionRegions(this.occlusionProfiles[obj.assetId]).length) occluders.push(item);
             else if (item.key <= playerKey) behind.push(item);
             else inFront.push(item);
         }
@@ -709,9 +716,11 @@ export class Renderer {
         // coarse at side walls, while drawing unconditionally would also
         // hide a character who has already walked in front of the building.
         for (const item of occluders) {
-            const profile = this.occlusionProfiles[item.obj.assetId];
-            if (this._isPlayerBehindOcclusionPatch(item.obj, profile)) {
-                this._drawOcclusionPatch(ctx, item.obj, profile);
+            for (const points of this._occlusionRegions(this.occlusionProfiles[item.obj.assetId])) {
+                const profile = { points };
+                if (this._isPlayerBehindOcclusionPatch(item.obj, profile)) {
+                    this._drawOcclusionPatch(ctx, item.obj, profile);
+                }
             }
         }
     }
@@ -734,6 +743,11 @@ export class Renderer {
         // No vertical slice through the painted region means the player's
         // feet are beside the wall rather than behind it.
         return frontY != null && playerFootY < frontY - 1;
+    }
+
+    _occlusionRegions(profile) {
+        if (Array.isArray(profile?.regions)) return profile.regions.filter(points => points?.length >= 3);
+        return profile?.points?.length >= 3 ? [profile.points] : [];
     }
 
     _isPlayerInsideVilla(obj) {
@@ -973,6 +987,58 @@ export class Renderer {
         if (items.length > 1) items.sort((a, b) => a.key - b.key);
         for (const item of items) item.draw();
         this._drawOcclusionEditor();
+        this._drawNavigationDebug();
+    }
+
+    _drawNavigationDebug() {
+        if (!this.showNavigationDebug) return;
+        const ctx = this.ctx;
+        const unit = 1 / this.camera.zoom;
+        for (const obj of this.tileMap.objects) {
+            const profile = this.navigationProfiles[obj.assetId];
+            if (!profile?.surfaces) continue;
+            ctx.save();
+            ctx.lineWidth = 1.5 * unit;
+            for (const [key, height] of Object.entries(profile.surfaces)) {
+                const [lx, ly] = key.split(',').map(Number);
+                const p = cellToScreen(obj.gx + lx, obj.gy + ly);
+                p.y -= Number(height || 0) * CONFIG.voxel.height;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x + TW / 2, p.y + TH / 2);
+                ctx.lineTo(p.x, p.y + TH);
+                ctx.lineTo(p.x - TW / 2, p.y + TH / 2);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(48, 201, 166, 0.24)';
+                ctx.strokeStyle = '#17a884';
+                ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#075d4a';
+                ctx.font = `${10 * unit}px sans-serif`;
+                ctx.fillText(String(height), p.x - 3 * unit, p.y + TH / 2 + 3 * unit);
+            }
+            ctx.strokeStyle = '#ffbc42';
+            ctx.lineWidth = 3 * unit;
+            for (const edge of profile.doors ?? []) {
+                const [from] = edge.split('>');
+                const [lx, ly] = from.split(',').map(Number);
+                if (lx < 0 || ly < 0 || lx >= obj.footprint.w || ly >= obj.footprint.d) continue;
+                const p = cellToScreen(obj.gx + lx, obj.gy + ly);
+                ctx.beginPath(); ctx.arc(p.x, p.y + TH / 2, 6 * unit, 0, Math.PI * 2); ctx.stroke();
+            }
+            const asset = getAsset(obj.assetId);
+            if (asset) {
+                const origin = cellToScreen(obj.gx, obj.gy);
+                const dx = origin.x - asset.anchorX, dy = origin.y - asset.anchorY;
+                ctx.strokeStyle = '#f34d70'; ctx.lineWidth = 2 * unit; ctx.setLineDash([5 * unit, 3 * unit]);
+                for (const points of profile.masks ?? []) {
+                    if (points.length < 3) continue;
+                    ctx.beginPath(); ctx.moveTo(dx + points[0].x * asset.width, dy + points[0].y * asset.height);
+                    for (let i = 1; i < points.length; i++) ctx.lineTo(dx + points[i].x * asset.width, dy + points[i].y * asset.height);
+                    ctx.closePath(); ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
     }
 
     /** Draw the selected asset bounds plus the user's in-progress polygon. */

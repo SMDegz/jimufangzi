@@ -11,11 +11,12 @@ import { PlacedObject } from '../building/PlacedObject.js';
 const KEY = CONFIG.storageKey;
 
 export const SaveSystem = {
-    save(tileMap, camera, occlusionProfiles = {}) {
+    save(tileMap, camera, occlusionProfiles = {}, navigationProfiles = {}) {
         const payload = {
             v: 2,
             tileMap: tileMap.serialize(),
             occlusionProfiles,
+            navigationProfiles,
             camera: {
                 offsetX: camera.offsetX,
                 offsetY: camera.offsetY,
@@ -31,13 +32,14 @@ export const SaveSystem = {
         }
     },
 
-    load(tileMap, camera, setOcclusionProfiles = () => {}) {
+    load(tileMap, camera, setOcclusionProfiles = () => {}, setNavigationProfiles = () => {}) {
         try {
             const raw = localStorage.getItem(KEY);
             if (!raw) return false;
             const data = JSON.parse(raw);
             tileMap.deserialize(data.tileMap, d => new PlacedObject(d));
             setOcclusionProfiles(data.occlusionProfiles ?? {});
+            setNavigationProfiles(data.navigationProfiles ?? {});
             if (data.camera) {
                 camera.offsetX = data.camera.offsetX;
                 camera.offsetY = data.camera.offsetY;

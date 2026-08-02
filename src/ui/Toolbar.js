@@ -16,6 +16,7 @@ const TOOL_ICONS = {
     save:  drawSaveIcon,
     reset: drawResetIcon,
     occlusion: drawOcclusionIcon,
+    debug: drawGridIcon,
     expand: drawExpandIcon,
 };
 
@@ -28,6 +29,7 @@ const TOOL_BUTTONS = [
     { id: 'save',   label: '保存' },
     { id: 'reset',  label: '重置' },
     { id: 'occlusion', label: '遮挡' },
+    { id: 'debug', label: '标记' },
     { id: 'expand', label: '扩展' },
 ];
 
@@ -89,6 +91,7 @@ export class Toolbar {
             case 'reset': this.game.reset();          break;
             case 'fill':  this.game.fillGrass();      break;
             case 'occlusion': this.game.openOcclusionEditor(); break;
+            case 'debug': this.game.toggleNavigationDebug(); break;
             case 'expand': this.game.expandMap(); break;
         }
     }
@@ -102,6 +105,7 @@ export class Toolbar {
              || (id === 'erase' && tool === 'erase')
              || (id === 'pan'   && tool === 'pan')
              || (id === 'grid'  && grid)
+             || (id === 'debug' && this.game.renderer.showNavigationDebug)
             );
         }
     }

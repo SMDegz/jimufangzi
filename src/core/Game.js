@@ -61,8 +61,10 @@ export class Game {
         this.placement = new PlacementSystem(this.tileMap);
         this.input = new InputManager(canvas, this.camera, this);
         this.occlusionProfiles = {};
+        this.navigationProfiles = {};
         this.occlusionEdit = null;
         this.renderer.setOcclusionProfiles(this.occlusionProfiles);
+        this.renderer.setNavigationProfiles(this.navigationProfiles);
 
         // A deliberately simple controllable stand-in for a future character.
         // `x/y` are rendered positions while `targetX/targetY` keep movement
@@ -187,8 +189,15 @@ export class Game {
         this.ui?.update();
     }
 
+    toggleNavigationDebug() {
+        this.renderer.showNavigationDebug = !this.renderer.showNavigationDebug;
+        this.renderer.markDirty();
+        this.ui?.update();
+        this.ui?.showToast(this.renderer.showNavigationDebug ? '已显示建筑绘制标记' : '已隐藏建筑绘制标记');
+    }
+
     save() {
-        const ok = SaveSystem.save(this.tileMap, this.camera, this.occlusionProfiles);
+        const ok = SaveSystem.save(this.tileMap, this.camera, this.occlusionProfiles, this.navigationProfiles);
         this.ui?.showToast(ok ? '岛屿已保存' : '保存失败');
     }
 
@@ -196,6 +205,9 @@ export class Game {
         const ok = SaveSystem.load(this.tileMap, this.camera, profiles => {
             this.occlusionProfiles = profiles;
             this.renderer.setOcclusionProfiles(profiles);
+        }, profiles => {
+            this.navigationProfiles = profiles;
+            this.renderer.setNavigationProfiles(profiles);
         });
         if (ok) this.renderer.markDirty();
         return ok;
@@ -440,24 +452,50 @@ export class Game {
         ].find(obj => obj?.assetId === 'villa');
         if (!villa) return true;
 
+        const profile = this._navigationProfileFor(villa);
         const toLocal = `${toX - villa.gx},${toY - villa.gy}`;
         const fromLocal = `${fromX - villa.gx},${fromY - villa.gy}`;
-        const fromIsSurface = Object.hasOwn(VILLA_SURFACES, fromLocal);
-        const toIsSurface = Object.hasOwn(VILLA_SURFACES, toLocal);
+        const fromIsSurface = Object.hasOwn(profile.surfaces, fromLocal);
+        const toIsSurface = Object.hasOwn(profile.surfaces, toLocal);
         // Both cells are part of the villa route, so this is movement inside
         // the building. A crossing between a route cell and the exterior is
         // legal only through one of the explicitly painted blue doors.
         if (fromIsSurface === toIsSurface) return true;
-        return VILLA_ENTRY_EDGES.has(`${fromLocal}>${toLocal}`);
+        return profile.doors.has(`${fromLocal}>${toLocal}`);
     }
 
     _structureHeightAt(gx, gy) {
         const obj = this.tileMap.objectAt(gx, gy);
-        if (!obj || obj.assetId !== 'villa') return null;
+        if (!obj) return null;
         const localX = gx - obj.gx;
         const localY = gy - obj.gy;
         const key = `${localX},${localY}`;
-        return Object.hasOwn(VILLA_SURFACES, key) ? VILLA_SURFACES[key] : null;
+        const profile = this._navigationProfileFor(obj);
+        return profile && Object.hasOwn(profile.surfaces, key) ? profile.surfaces[key] : null;
+    }
+
+    _navigationProfileFor(obj) {
+        const custom = this.navigationProfiles[obj.assetId];
+        if (custom?.surfaces) return {
+            surfaces: custom.surfaces,
+            doors: new Set(custom.doors ?? []),
+        };
+        if (obj.assetId !== 'villa') return null;
+        return { surfaces: VILLA_SURFACES, doors: VILLA_ENTRY_EDGES };
+    }
+
+    setNavigationProfile(assetId, profile) {
+        this.navigationProfiles[assetId] = {
+            surfaces: { ...(profile.surfaces ?? {}) },
+            doors: [...(profile.doors ?? [])],
+            masks: (profile.masks ?? []).map(region => region.map(p => ({ x: p.x, y: p.y }))),
+        };
+        if (profile.masks?.length) this.occlusionProfiles[assetId] = { regions: this.navigationProfiles[assetId].masks };
+        else delete this.occlusionProfiles[assetId];
+        this.renderer.setOcclusionProfiles(this.occlusionProfiles);
+        this.renderer.setNavigationProfiles(this.navigationProfiles);
+        this.save();
+        this.ui?.showToast('建筑通行、门和遮罩绘制已保存');
     }
 
     /* ── Foreground-occlusion profile editor ─────────────────── */

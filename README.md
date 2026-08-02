@@ -62,7 +62,8 @@ arranging things until they look right.
 | Gate / archway | A passable entrance through a surrounding wall |
 | Stairs terrain | The character climbs two voxel steps while standing on it |
 | Main villa | Front courtyard, left staircase, upstairs roof terrace, and lower pergola terrace are walkable at their respective heights |
-| `O` | Draw a reusable foreground-occlusion outline: click an object, trace the wall, then double-click / `Enter` to save (`Esc` cancels) |
+| Toolbar “遮挡” | Open the building authoring canvas: paint walkable courtyard / interior cells, stair heights, door edges, and multiple foreground masks; save to apply to every copy of that asset |
+| Toolbar “标记” | Toggle the saved building drawing Debug overlay in the game |
 | Toolbar “扩展” | Add a 2-cell border on every side of the map (up to 64 × 64) |
 
 ### Touch
