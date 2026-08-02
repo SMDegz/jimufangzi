@@ -6,8 +6,8 @@
 
 import { Toolbar } from './Toolbar.js';
 import { AssetPalette } from './AssetPalette.js';
-import { HUD } from './HUD.js?v=navigation-anchor-1';
-import { OcclusionEditor } from './OcclusionEditor.js?v=navigation-anchor-1';
+import { HUD } from './HUD.js?v=navigation-modefix-1';
+import { OcclusionEditor } from './OcclusionEditor.js?v=navigation-modefix-1';
 import { playUiClick } from './Audio.js';
 
 export class UIManager {

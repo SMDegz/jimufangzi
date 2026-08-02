@@ -6,8 +6,8 @@
  */
 
 import { loadAssets } from './assets/assetLoader.js';
-import { Game } from './core/Game.js?v=navigation-anchor-1';
-import { UIManager } from './ui/UIManager.js?v=navigation-anchor-1';
+import { Game } from './core/Game.js?v=navigation-modefix-1';
+import { UIManager } from './ui/UIManager.js?v=navigation-modefix-1';
 import { loadUiAudio } from './ui/Audio.js';
 
 async function main() {

@@ -502,7 +502,9 @@ export class Game {
 
     _navigationProfileFor(obj) {
         const custom = this.navigationProfiles[obj.assetId];
-        if (custom?.surfaces) return {
+        // An author may save only foreground masks. That must not replace a
+        // working building route with an empty collision profile.
+        if (custom?.surfaces && Object.keys(custom.surfaces).length > 0) return {
             surfaces: custom.surfaces,
             doors: new Set(custom.doors ?? []),
         };
@@ -522,7 +524,10 @@ export class Game {
         this.renderer.setOcclusionProfiles(this.occlusionProfiles);
         this.renderer.setNavigationProfiles(this.navigationProfiles);
         this.save();
-        this.ui?.showToast('建筑通行、门和遮罩绘制已保存');
+        const surfaceCount = Object.keys(profile.surfaces ?? {}).length;
+        this.ui?.showToast(surfaceCount
+            ? `建筑绘制已保存：${surfaceCount} 个通行格`
+            : '仅保存了遮罩；未画通行格，主别墅仍使用默认路线');
     }
 
     /* ── Foreground-occlusion profile editor ─────────────────── */
