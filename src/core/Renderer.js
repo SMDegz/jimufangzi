@@ -694,7 +694,11 @@ export class Renderer {
             // zero-height ground terrace), draw the entire sprite first so
             // no opaque façade piece can swallow the character.
             if (this._isPlayerInsideVilla(obj)) {
-                behind.push(item);
+                // Keep the baked villa sprite behind a character inside it,
+                // but do not discard user-authored foreground regions: those
+                // are repainted selectively after the player below.
+                if (this._occlusionRegions(this.occlusionProfiles[obj.assetId]).length) occluders.push(item);
+                else behind.push(item);
                 continue;
             }
             // Objects with a profile are first painted behind the character;
@@ -728,7 +732,6 @@ export class Renderer {
     _isPlayerBehindOcclusionPatch(obj, profile) {
         const asset = getAsset(obj.assetId);
         if (!asset || profile.points.length < 3) return false;
-        if (this._isPlayerInsideVilla(obj)) return false;
         const origin = cellToScreen(obj.gx, obj.gy);
         const dx = origin.x - asset.anchorX;
         const dy = origin.y - asset.anchorY;
